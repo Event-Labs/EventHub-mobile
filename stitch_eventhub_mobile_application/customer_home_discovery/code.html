@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>EventHub - Live Nocturnal Events &amp; Tickets</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "on-primary-fixed": "#341100",
+            "on-surface-variant": "#e0c0b1",
+            "inverse-primary": "#9d4300",
+            "secondary-container": "#334c5c",
+            "outline-variant": "#584237",
+            "surface-container-highest": "#2c344b",
+            "surface-container": "#161f35",
+            "inverse-on-surface": "#273046",
+            "inverse-surface": "#dae2ff",
+            "on-secondary": "#1a3342",
+            "on-tertiary-container": "#4c0084",
+            "surface-bright": "#303950",
+            "error-container": "#93000a",
+            "on-error-container": "#ffdad6",
+            "tertiary-fixed-dim": "#ddb7ff",
+            "tertiary-container": "#be7bff",
+            "on-tertiary-fixed-variant": "#6900b3",
+            "on-tertiary": "#490080",
+            "surface-container-low": "#121b30",
+            "on-primary": "#552100",
+            "primary-fixed-dim": "#ffb690",
+            "on-background": "#dae2ff",
+            "background": "#0a1328",
+            "surface-container-lowest": "#050d22",
+            "primary-container": "#f97316",
+            "on-primary-fixed-variant": "#783200",
+            "secondary-fixed": "#cce6fa",
+            "on-secondary-fixed-variant": "#314a59",
+            "secondary": "#b0cadd",
+            "primary-fixed": "#ffdbca",
+            "surface": "#0a1328",
+            "surface-variant": "#2c344b",
+            "on-error": "#690005",
+            "tertiary": "#ddb7ff",
+            "tertiary-fixed": "#f0dbff",
+            "on-secondary-fixed": "#021e2c",
+            "surface-dim": "#0a1328",
+            "surface-container-high": "#21293f",
+            "on-surface": "#dae2ff",
+            "on-primary-container": "#582200",
+            "secondary-fixed-dim": "#b0cadd",
+            "on-tertiary-fixed": "#2c0051",
+            "surface-tint": "#ffb690",
+            "primary": "#ffb690",
+            "outline": "#a78b7d",
+            "on-secondary-container": "#a2bcce",
+            "error": "#ffb4ab"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "margin-screen": "1rem",
+            "gutter-grid": "0.75rem",
+            "space-md": "1rem",
+            "touch-target-min": "2.75rem",
+            "nav-bottom-height": "4rem",
+            "space-xl": "1.5rem",
+            "space-2xl": "2rem",
+            "space-xs": "0.5rem",
+            "space-3xl": "2.5rem",
+            "space-lg": "1.25rem",
+            "space-sm": "0.75rem",
+            "space-2xs": "0.25rem"
+          },
+          "fontFamily": {
+            "body-md": ["Inter"],
+            "body-lg-medium": ["Inter"],
+            "headline-md": ["Geist"],
+            "label-sm": ["Inter"],
+            "body-md-medium": ["Inter"],
+            "headline-lg": ["Geist"],
+            "headline-sm": ["Geist"],
+            "headline-xl": ["Geist"],
+            "headline-xl-mobile": ["Geist"],
+            "label-md": ["Inter"],
+            "code-ticket": ["Geist"],
+            "body-lg": ["Inter"]
+          },
+          "fontSize": {
+            "body-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0em", "fontWeight": "400"}],
+            "body-lg-medium": ["16px", {"lineHeight": "24px", "letterSpacing": "0em", "fontWeight": "500"}],
+            "headline-md": ["20px", {"lineHeight": "26px", "letterSpacing": "-0.005em", "fontWeight": "600"}],
+            "label-sm": ["11px", {"lineHeight": "14px", "letterSpacing": "0.04em", "fontWeight": "600"}],
+            "body-md-medium": ["14px", {"lineHeight": "20px", "letterSpacing": "0.005em", "fontWeight": "500"}],
+            "headline-lg": ["24px", {"lineHeight": "30px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+            "headline-sm": ["18px", {"lineHeight": "24px", "letterSpacing": "0em", "fontWeight": "600"}],
+            "headline-xl": ["36px", {"lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+            "headline-xl-mobile": ["28px", {"lineHeight": "34px", "letterSpacing": "-0.015em", "fontWeight": "700"}],
+            "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "600"}],
+            "code-ticket": ["15px", {"lineHeight": "20px", "letterSpacing": "0.08em", "fontWeight": "600"}],
+            "body-lg": ["16px", {"lineHeight": "24px", "letterSpacing": "0em", "fontWeight": "400"}]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    .ticket-cutout-left {
+      mask-image: radial-gradient(circle at 0px 50%, transparent 8px, black 8.5px);
+    }
+    .ticket-cutout-right {
+      mask-image: radial-gradient(circle at 100% 50%, transparent 8px, black 8.5px);
+    }
+    .neon-glow-orange {
+      box-shadow: 0 8px 24px rgba(249, 115, 22, 0.35);
+    }
+    .neon-glow-purple {
+      box-shadow: 0 8px 24px rgba(168, 85, 247, 0.38);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface font-body-md min-h-screen flex justify-center antialiased selection:bg-primary-container selection:text-on-primary">
+<!-- Mobile Container Shell (Smartphone 390px, Portrait) -->
+<div class="w-full max-w-[390px] min-h-screen bg-background relative flex flex-col pb-[96px] shadow-2xl overflow-x-hidden border-x border-surface-container-high/40">
+<!-- Top App Bar (JSON Anchor execution & Brand Tokens) -->
+<header class="sticky top-0 z-50 bg-surface/90 dark:bg-surface/90 backdrop-blur-md px-space-md h-14 max-w-lg mx-auto w-full flex items-center justify-between shadow-sm dark:shadow-none">
+<!-- Brand & Icon -->
+<div class="flex items-center gap-space-xs active:scale-95 transition-transform duration-150 cursor-pointer">
+<div class="w-8 h-8 rounded-lg bg-primary-container flex items-center justify-center text-on-primary shadow-sm">
+<span class="material-symbols-outlined text-[20px]" data-icon="local_activity">local_activity</span>
+</div>
+<div class="flex flex-col">
+<span class="text-headline-sm font-headline-sm font-bold text-primary dark:text-primary tracking-tight">EventHub</span>
+</div>
+</div>
+<!-- Location Selector Pill -->
+<button class="flex items-center gap-1 px-space-sm py-1 rounded-full bg-surface-container-high/80 border border-outline-variant/30 text-secondary hover:bg-surface-container-highest/50 transition-colors active:scale-95 touch-target-min">
+<span class="material-symbols-outlined text-[16px] text-primary-container" data-icon="near_me">near_me</span>
+<span class="text-label-sm font-label-sm text-on-surface font-semibold tracking-tight truncate max-w-[96px]">TP. Hồ Chí Minh</span>
+<span class="material-symbols-outlined text-[14px] text-secondary" data-icon="expand_more">expand_more</span>
+</button>
+<!-- Trailing Action: Notification & Avatar -->
+<div class="flex items-center gap-space-xs">
+<button class="relative w-9 h-9 rounded-full flex items-center justify-center text-secondary hover:bg-surface-container-highest/50 transition-colors active:scale-95">
+<span class="material-symbols-outlined text-[22px]" data-icon="notifications">notifications</span>
+<!-- Unread indicator badge -->
+<span class="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-primary-container rounded-full ring-2 ring-background"></span>
+</button>
+<div class="w-8 h-8 rounded-full ring-1 ring-primary-container/40 p-0.5 overflow-hidden">
+<img class="w-full h-full object-cover rounded-full" data-alt="A nocturnal neon-lit digital portrait of a stylish festival-goer wearing reflective cybernetic glasses in a dark atmospheric club. Deep midnight navy background with intense ambient purple and warm orange lighting casts high-tech cinematic glows on the face." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDoEmnIlJvNzLqzJoAxqW9bDgbhfJIMMQjaJvBEtlHK_r2zAbRSIt2LEqus4XYG4K7Oku_2b7DKH2fPzT6Qdwag9cDmYIJcxTezEoUOQjJRNcy403OcL50nC5AJWnrKdFzAFCsGb8UNwxrL-cHRggpRezgnevQRrYMO3Vd-wBhA2vpXD0qnrk05GOiPpaEOfSc8v1jRqXsf4VpeyA0hNf0ynGPh_y1f7xigH_tjKd2Ex6mU8zAAtRa9"/>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-1 flex flex-col px-space-md pt-space-xs space-y-space-lg">
+<!-- Search & Discovery Pill Bar -->
+<section class="w-full">
+<div class="relative flex items-center w-full">
+<div class="absolute left-3.5 flex items-center pointer-events-none text-secondary">
+<span class="material-symbols-outlined text-[20px]" data-icon="search">search</span>
+</div>
+<input class="w-full h-12 pl-10 pr-12 rounded-xl bg-surface-container-low text-on-surface placeholder:text-secondary/70 text-body-md font-body-md border border-outline-variant/30 focus:border-secondary focus:ring-1 focus:ring-secondary focus:outline-none transition-all shadow-inner" placeholder="Search concerts, EDM, workshops, sports..." type="text"/>
+<button class="absolute right-2 w-8 h-8 rounded-lg bg-surface-container-high flex items-center justify-center text-secondary hover:text-on-surface active:scale-95 transition-all">
+<span class="material-symbols-outlined text-[18px]" data-icon="tune">tune</span>
+</button>
+</div>
+</section>
+<!-- Category Filter Slider -->
+<section class="w-full -mx-space-md px-space-md overflow-x-auto no-scrollbar">
+<div class="flex items-center gap-space-xs whitespace-nowrap py-1">
+<!-- Active Pill -->
+<button class="h-9 px-space-md rounded-full bg-primary-container text-on-primary flex items-center gap-1.5 text-label-md font-label-md font-semibold shadow-md active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-[16px]" data-icon="local_fire_department" data-weight="fill">local_fire_department</span>
+<span>All</span>
+</button>
+<!-- Inactive Category Pills -->
+<button class="h-9 px-space-md rounded-full bg-surface-container-low border border-outline-variant/30 text-secondary hover:text-on-surface flex items-center gap-1.5 text-label-md font-label-md font-medium active:scale-95 transition-all">
+<span class="material-symbols-outlined text-[16px] text-tertiary" data-icon="music_note">music_note</span>
+<span>Music</span>
+</button>
+<button class="h-9 px-space-md rounded-full bg-surface-container-low border border-outline-variant/30 text-secondary hover:text-on-surface flex items-center gap-1.5 text-label-md font-label-md font-medium active:scale-95 transition-all">
+<span class="material-symbols-outlined text-[16px] text-primary-container" data-icon="festival">festival</span>
+<span>Festival</span>
+</button>
+<button class="h-9 px-space-md rounded-full bg-surface-container-low border border-outline-variant/30 text-secondary hover:text-on-surface flex items-center gap-1.5 text-label-md font-label-md font-medium active:scale-95 transition-all">
+<span class="material-symbols-outlined text-[16px] text-secondary-fixed" data-icon="lightbulb">lightbulb</span>
+<span>Tech</span>
+</button>
+<button class="h-9 px-space-md rounded-full bg-surface-container-low border border-outline-variant/30 text-secondary hover:text-on-surface flex items-center gap-1.5 text-label-md font-label-md font-medium active:scale-95 transition-all">
+<span class="material-symbols-outlined text-[16px] text-tertiary-fixed-dim" data-icon="theater_comedy">theater_comedy</span>
+<span>Theatre</span>
+</button>
+<button class="h-9 px-space-md rounded-full bg-surface-container-low border border-outline-variant/30 text-secondary hover:text-on-surface flex items-center gap-1.5 text-label-md font-label-md font-medium active:scale-95 transition-all">
+<span class="material-symbols-outlined text-[16px] text-primary-fixed" data-icon="sports_soccer">sports_soccer</span>
+<span>Sports</span>
+</button>
+</div>
+</section>
+<!-- Hero Featured Event Carousel Card -->
+<section class="w-full flex flex-col space-y-space-xs">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-primary-container text-[18px]" data-icon="bolt">bolt</span>
+<h2 class="text-headline-sm font-headline-sm text-on-surface tracking-tight font-bold">Featured Spotlight</h2>
+</div>
+<span class="text-label-sm font-label-sm text-secondary font-semibold cursor-pointer hover:text-primary">View all (12)</span>
+</div>
+<div class="relative rounded-2xl overflow-hidden bg-surface-container-low border border-outline-variant/20 shadow-xl group">
+<!-- 16:9 Media Aspect Container -->
+<div class="relative w-full aspect-[16/9] overflow-hidden">
+<img class="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500" data-alt="Massive illuminated EDM neon music festival stage at midnight filled with dazzling laser beams, kinetic light towers, and a dynamic cheering crowd. Futuristic cosmic purple and orange stage illumination reflecting across atmospheric smoke. High fidelity nocturnal concert photograph with deep midnight navy shadows." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCsh1MyeOrExv0OTGWPXymZBnHdDiqnLogqJTML1O6osQPpeQP11Xa069TLuCwM-qYBI6xOmazp-7pg5MCxPM4TcaDHr7rhFP7PRyR7QS79TjINZdZ4k4DfgPm1umU1TYFb7w-_8bpoVl9R1VTWzNVop69NIQAPIhcnx8LZ1FDgsJ4ME58mNas6uSxXTAiSOwUKbbgiKBdEG1KIhXlEOKa-7pEzLNe1z7_DJbEJhZKSIizd6czYP7-3"/>
+<!-- Gradient Overlay for Legibility -->
+<div class="absolute inset-0 bg-gradient-to-t from-surface-container-lowest via-surface-container-lowest/50 to-transparent"></div>
+<!-- Badges Layer -->
+<div class="absolute top-3 left-3 flex items-center gap-1.5">
+<span class="px-2.5 py-1 rounded-full bg-primary-container text-on-primary text-label-sm font-label-sm font-bold uppercase tracking-wider shadow-sm">
+                HOT SELLING
+              </span>
+<span class="px-2 py-0.5 rounded-full bg-surface-container-lowest/80 backdrop-blur-md text-tertiary-fixed text-label-sm font-label-sm font-medium border border-tertiary-container/30">
+                18+ VIP Lounge
+              </span>
+</div>
+<!-- Date Tag Pin -->
+<div class="absolute top-3 right-3 px-2.5 py-1 rounded-lg bg-surface-container-high/90 backdrop-blur-md border border-outline-variant/30 flex flex-col items-center">
+<span class="text-[10px] font-label-sm text-primary-fixed uppercase leading-tight font-bold">DEC</span>
+<span class="text-headline-sm font-headline-sm text-on-surface leading-none font-extrabold">28</span>
+</div>
+</div>
+<!-- Featured Event Details -->
+<div class="p-space-md pt-2 flex flex-col space-y-space-sm bg-surface-container-low">
+<div>
+<h3 class="text-headline-md font-headline-md font-bold text-on-surface tracking-tight group-hover:text-primary-fixed transition-colors">
+                NEON HORIZON FESTIVAL 2025
+              </h3>
+<div class="flex items-center gap-2 mt-1 text-secondary text-body-md font-body-md">
+<div class="flex items-center gap-1 text-label-md font-label-md">
+<span class="material-symbols-outlined text-[15px] text-primary-container" data-icon="schedule">schedule</span>
+<span>18:00 - 02:00</span>
+</div>
+<span class="w-1 h-1 rounded-full bg-outline-variant"></span>
+<div class="flex items-center gap-1 text-label-md font-label-md truncate">
+<span class="material-symbols-outlined text-[15px] text-secondary" data-icon="pin_drop">pin_drop</span>
+<span>SECC District 7, HCMC</span>
+</div>
+</div>
+</div>
+<!-- Pricing & Call to Action -->
+<div class="pt-2 border-t border-outline-variant/20 flex items-center justify-between">
+<div>
+<span class="text-[11px] font-label-sm text-secondary uppercase tracking-wider block">Tickets From</span>
+<div class="text-headline-sm font-headline-sm font-bold text-on-surface flex items-baseline gap-1">
+<span>450.000</span>
+<span class="text-label-sm font-label-sm text-primary-container font-semibold">VND</span>
+</div>
+</div>
+<button class="h-11 px-space-lg rounded-xl bg-primary-container hover:bg-primary text-on-primary font-body-md-medium text-body-md-medium flex items-center gap-1.5 neon-glow-orange active:scale-95 transition-all">
+<span>Get Tickets</span>
+<span class="material-symbols-outlined text-[18px]" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+<!-- AI Curator Recommendation Banner (Glassmorphic Accent) -->
+<section class="rounded-xl p-space-sm bg-gradient-to-r from-surface-container via-surface-container-high to-surface-container border border-tertiary-container/30 flex items-center justify-between shadow-md">
+<div class="flex items-center gap-2.5">
+<div class="w-10 h-10 rounded-lg bg-tertiary-container/20 border border-tertiary-container/40 flex items-center justify-center text-tertiary">
+<span class="material-symbols-outlined text-[22px]" data-icon="auto_awesome">auto_awesome</span>
+</div>
+<div>
+<div class="flex items-center gap-1.5">
+<span class="text-body-md-medium font-body-md-medium text-on-surface font-semibold">Curated for tonight</span>
+<span class="text-[10px] px-1.5 py-0.2 rounded bg-tertiary-container/30 text-tertiary font-bold tracking-wider uppercase">AI Pick</span>
+</div>
+<p class="text-label-sm font-label-sm text-secondary">3 synthwave events match your music taste</p>
+</div>
+</div>
+<button class="w-8 h-8 rounded-full bg-surface-container-highest/60 flex items-center justify-center text-secondary hover:text-on-surface active:scale-90 transition-all">
+<span class="material-symbols-outlined text-[18px]" data-icon="chevron_right">chevron_right</span>
+</button>
+</section>
+<!-- Trending Events Stream Section -->
+<section class="w-full flex flex-col space-y-space-md">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-primary text-[18px]" data-icon="trending_up">trending_up</span>
+<h2 class="text-headline-sm font-headline-sm text-on-surface font-bold tracking-tight">Trending Events</h2>
+</div>
+<div class="flex items-center gap-1 text-label-sm font-label-sm text-secondary">
+<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+<span>Real-time</span>
+</div>
+</div>
+<!-- Event Card Item 1 (Cyberpunk Live Session) -->
+<article class="w-full bg-surface-container-low rounded-2xl border border-outline-variant/25 overflow-hidden flex flex-col shadow-lg transition-transform active:scale-[0.99]">
+<div class="flex p-space-sm gap-space-sm">
+<!-- Thumbnail 1:1 -->
+<div class="relative w-24 h-24 rounded-xl overflow-hidden flex-shrink-0 bg-surface-container">
+<img class="w-full h-full object-cover" data-alt="Atmospheric indie rock artist performing under intense violet and orange spotlights in a moody subterranean night lounge. Microphones, electric guitar strings shimmering with dramatic rim light, and cinematic haze. High contrast dark aesthetics matching cosmic navy theme." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCHvQQo3rlkT-_-4tUHI3g57mTvXFLLtgJIrPL-reMGuj3XaOw5i6m8XE6UGxWKt-QuWxbS2cGCGQjYHDt8EDrRooC6YbzU-eaPUv9DcCue5-MmAQR68oLBY_jSWFWP-C4xOAdAv4AxulL_cS5HPJAIgKYoERtOuwFAt7Adc_XIULWFK-BBSXPXfPg5aXY3f55MNtosKA6Nk4dKNOiGKA4Obe8EMj5iC0bffRUXPj_BkbYJEu63krqF"/>
+<div class="absolute bottom-1 left-1 px-1.5 py-0.5 rounded bg-surface-container-lowest/90 backdrop-blur-sm text-[10px] font-label-sm font-bold text-primary-fixed">
+                LIVE
+              </div>
+</div>
+<!-- Meta & Info -->
+<div class="flex-1 flex flex-col justify-between overflow-hidden">
+<div>
+<div class="flex items-center justify-between gap-1">
+<span class="text-label-sm font-label-sm text-primary font-semibold truncate">SAIGON INDIE NIGHTS</span>
+<span class="material-symbols-outlined text-[18px] text-secondary cursor-pointer hover:text-primary-container" data-icon="bookmark">bookmark</span>
+</div>
+<h4 class="text-body-lg-medium font-body-lg-medium font-bold text-on-surface truncate leading-tight mt-0.5">
+                  The Nocturnal Acoustic Echoes
+                </h4>
+<div class="flex items-center gap-1 text-secondary text-label-sm font-label-sm mt-1 truncate">
+<span class="material-symbols-outlined text-[14px]" data-icon="calendar_month">calendar_month</span>
+<span>Fri, Jan 03 • 20:00</span>
+</div>
+<div class="flex items-center gap-1 text-secondary text-label-sm font-label-sm truncate">
+<span class="material-symbols-outlined text-[14px]" data-icon="location_on">location_on</span>
+<span>Hard Rock Cafe, Ben Nghe D1</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Bottom Micro Ticket Bar -->
+<div class="px-space-sm py-2 bg-surface-container-lowest/60 border-t border-outline-variant/20 flex items-center justify-between">
+<div class="flex items-center gap-1.5">
+<span class="px-2 py-0.5 rounded bg-secondary-container/50 text-secondary-fixed text-[11px] font-label-sm font-medium">92% Claimed</span>
+<span class="text-body-md font-body-md font-bold text-on-surface">250.000 đ</span>
+</div>
+<button class="h-8 px-3 rounded-lg bg-surface-container-high hover:bg-primary-container hover:text-on-primary text-secondary text-label-md font-label-md font-semibold flex items-center gap-1 transition-all">
+<span>Book</span>
+<span class="material-symbols-outlined text-[14px]" data-icon="flash_on">flash_on</span>
+</button>
+</div>
+</article>
+<!-- Event Card Item 2 (International DJ Arena) -->
+<article class="w-full bg-surface-container-low rounded-2xl border border-outline-variant/25 overflow-hidden flex flex-col shadow-lg transition-transform active:scale-[0.99]">
+<div class="flex p-space-sm gap-space-sm">
+<!-- Thumbnail 1:1 -->
+<div class="relative w-24 h-24 rounded-xl overflow-hidden flex-shrink-0 bg-surface-container">
+<img class="w-full h-full object-cover" data-alt="High energy DJ deck synthesizer console in an underground electronic warehouse rave. Deep blue ambient neon shadows, neon orange equalizer meters, and laser light reflections casting an ultra-modern festival tech aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAXF1myZ7dVayjdjsY9cXbThsHvczZKU-JKBTR7f-4z4ZOMXjt1cIuOadRJajuvCIlvfE5TORdJAlcx5PnTyx-8HFnEKzjrG9uHtYccztPIeJD2-ZrLxKajcrT6LnALtmvbPYYOuH-Hzj7IKeqnsnQOygu58dnRikxGlxoqo45sQ7EYG1H9OZp8Tg54ngoxw5KjE_1H8bRa4QLKibNXZTd9UGUoyZzY-LK7oZGNxbr1S9NOYsVZJLMr"/>
+<div class="absolute bottom-1 left-1 px-1.5 py-0.5 rounded bg-surface-container-lowest/90 backdrop-blur-sm text-[10px] font-label-sm font-bold text-tertiary-fixed">
+                FAST PASS
+              </div>
+</div>
+<!-- Meta & Info -->
+<div class="flex-1 flex flex-col justify-between overflow-hidden">
+<div>
+<div class="flex items-center justify-between gap-1">
+<span class="text-label-sm font-label-sm text-tertiary font-semibold truncate">GLOBAL BASS COLLECTIVE</span>
+<span class="material-symbols-outlined text-[18px] text-secondary cursor-pointer hover:text-primary-container" data-icon="bookmark">bookmark</span>
+</div>
+<h4 class="text-body-lg-medium font-body-lg-medium font-bold text-on-surface truncate leading-tight mt-0.5">
+                  Sub-Zero Bass Fest: Phase 2
+                </h4>
+<div class="flex items-center gap-1 text-secondary text-label-sm font-label-sm mt-1 truncate">
+<span class="material-symbols-outlined text-[14px]" data-icon="calendar_month">calendar_month</span>
+<span>Sat, Jan 11 • 21:30</span>
+</div>
+<div class="flex items-center gap-1 text-secondary text-label-sm font-label-sm truncate">
+<span class="material-symbols-outlined text-[14px]" data-icon="location_on">location_on</span>
+<span>The Warehouse 204, Thu Duc</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Bottom Micro Ticket Bar -->
+<div class="px-space-sm py-2 bg-surface-container-lowest/60 border-t border-outline-variant/20 flex items-center justify-between">
+<div class="flex items-center gap-1.5">
+<span class="px-2 py-0.5 rounded bg-primary-container/20 text-primary text-[11px] font-label-sm font-medium">Almost Full</span>
+<span class="text-body-md font-body-md font-bold text-on-surface">380.000 đ</span>
+</div>
+<button class="h-8 px-3 rounded-lg bg-surface-container-high hover:bg-primary-container hover:text-on-primary text-secondary text-label-md font-label-md font-semibold flex items-center gap-1 transition-all">
+<span>Book</span>
+<span class="material-symbols-outlined text-[14px]" data-icon="flash_on">flash_on</span>
+</button>
+</div>
+</article>
+<!-- Event Card Item 3 (Tech & Startup Summit Afterparty) -->
+<article class="w-full bg-surface-container-low rounded-2xl border border-outline-variant/25 overflow-hidden flex flex-col shadow-lg transition-transform active:scale-[0.99]">
+<div class="flex p-space-sm gap-space-sm">
+<!-- Thumbnail 1:1 -->
+<div class="relative w-24 h-24 rounded-xl overflow-hidden flex-shrink-0 bg-surface-container">
+<img class="w-full h-full object-cover" data-alt="Futuristic tech innovation afterparty lounge with glowing digital projections, holographic geometric displays, stylish people networking with ambient warm orange drinks against deep nocturnal midnight navy walls." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBLvsnojZW0orHXxdm52WsyRDo-YkXAJfMfgzqoVLa3_YASmqNgNs72OJSnymHB2MPiddXqt36VkqaZel8eqwj-owBPyptY3Tc9_SbU2G6p0UrljoI4iJbvYN2SDOarnInquSRe6cK-RX4DjKG2vVr-MBw1TENSUi3-2mVGtfaIHMod9pEx8ER8yDC1pTXfmtYXR5CIp6-kOwnioeOqPJKCwScAMlTZCb_bBVhDGHyYUModXAs19w31"/>
+<div class="absolute bottom-1 left-1 px-1.5 py-0.5 rounded bg-surface-container-lowest/90 backdrop-blur-md text-[10px] font-label-sm font-bold text-secondary-fixed">
+                NETWORKING
+              </div>
+</div>
+<!-- Meta & Info -->
+<div class="flex-1 flex flex-col justify-between overflow-hidden">
+<div>
+<div class="flex items-center justify-between gap-1">
+<span class="text-label-sm font-label-sm text-secondary-fixed font-semibold truncate">TECH &amp; CREATORS</span>
+<span class="material-symbols-outlined text-[18px] text-secondary cursor-pointer hover:text-primary-container" data-icon="bookmark">bookmark</span>
+</div>
+<h4 class="text-body-lg-medium font-body-lg-medium font-bold text-on-surface truncate leading-tight mt-0.5">
+                  AI Founders Night Saigon
+                </h4>
+<div class="flex items-center gap-1 text-secondary text-label-sm font-label-sm mt-1 truncate">
+<span class="material-symbols-outlined text-[14px]" data-icon="calendar_month">calendar_month</span>
+<span>Thu, Jan 16 • 18:30</span>
+</div>
+<div class="flex items-center gap-1 text-secondary text-label-sm font-label-sm truncate">
+<span class="material-symbols-outlined text-[14px]" data-icon="location_on">location_on</span>
+<span>Skyloft Landmark 81, Binh Thanh</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Bottom Micro Ticket Bar -->
+<div class="px-space-sm py-2 bg-surface-container-lowest/60 border-t border-outline-variant/20 flex items-center justify-between">
+<div class="flex items-center gap-1.5">
+<span class="px-2 py-0.5 rounded bg-surface-container-highest/50 text-secondary text-[11px] font-label-sm font-medium">Free RSVP</span>
+<span class="text-body-md font-body-md font-bold text-emerald-400">0 đ</span>
+</div>
+<button class="h-8 px-3 rounded-lg bg-surface-container-high hover:bg-primary-container hover:text-on-primary text-secondary text-label-md font-label-md font-semibold flex items-center gap-1 transition-all">
+<span>RSVP</span>
+<span class="material-symbols-outlined text-[14px]" data-icon="check_circle">check_circle</span>
+</button>
+</div>
+</article>
+</section>
+<!-- Venue Quick Pass Metaphor Section -->
+<section class="w-full bg-surface-container rounded-2xl p-space-md border border-outline-variant/30 relative overflow-hidden">
+<div class="flex items-start justify-between">
+<div>
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-primary-container text-[20px]" data-icon="qr_code_scanner">qr_code_scanner</span>
+<h3 class="text-headline-sm font-headline-sm font-bold text-on-surface">Express Gate Ready</h3>
+</div>
+<p class="text-label-sm font-label-sm text-secondary mt-1 max-w-[210px]">
+              Display zero-latency dynamic QR passes directly from your lockscreen or wallet.
+            </p>
+</div>
+<div class="w-12 h-12 bg-surface-container-lowest rounded-xl border border-secondary/20 flex items-center justify-center p-1.5">
+<span class="material-symbols-outlined text-[30px] text-on-surface" data-icon="qr_code_2">qr_code_2</span>
+</div>
+</div>
+</section>
+</main>
+<!-- Floating Action Button (AI Genie Assistant Accent) -->
+<aside class="fixed bottom-20 right-4 z-40 max-w-[390px]">
+<button aria-label="Ask Genie" class="flex items-center gap-2 pl-3.5 pr-4 h-12 rounded-full bg-gradient-to-r from-[#a855f7] to-[#7e22ce] text-white font-body-md-medium text-body-md-medium shadow-xl neon-glow-purple active:scale-95 transition-all cursor-pointer">
+<span class="material-symbols-outlined text-[20px]" data-icon="auto_awesome" data-weight="fill">auto_awesome</span>
+<span class="font-semibold tracking-tight">Ask Genie</span>
+</button>
+</aside>
+<!-- Bottom Navigation Bar (Executed verbatim from Shared Components JSON Customer Spec) -->
+<!-- active_navigation: Home (index 0) -->
+<nav class="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around h-nav-bottom-height max-w-[390px] mx-auto w-full px-space-xs bg-surface-container-lowest/90 dark:bg-surface-container-lowest/90 backdrop-blur-md shadow-lg dark:shadow-none">
+<!-- Tab 1: Home (Active Destination) -->
+<button class="flex flex-col items-center justify-center text-primary-container dark:text-primary-container font-semibold transition-all touch-target-min relative group">
+<span class="material-symbols-outlined text-[24px]" data-icon="home" data-weight="fill">home</span>
+<span class="text-label-sm font-label-sm mt-0.5">Home</span>
+<span class="w-1.5 h-1.5 rounded-full bg-primary-container mt-0.5"></span>
+</button>
+<!-- Tab 2: Search -->
+<button class="flex flex-col items-center justify-center text-secondary dark:text-secondary hover:text-on-surface dark:hover:text-on-surface transition-colors hover:bg-surface-container-highest/30 dark:hover:bg-surface-container-highest/30 rounded-xl touch-target-min active:scale-90 duration-150">
+<span class="material-symbols-outlined text-[24px]" data-icon="search">search</span>
+<span class="text-label-sm font-label-sm mt-0.5">Search</span>
+</button>
+<!-- Tab 3: Tickets -->
+<button class="flex flex-col items-center justify-center text-secondary dark:text-secondary hover:text-on-surface dark:hover:text-on-surface transition-colors hover:bg-surface-container-highest/30 dark:hover:bg-surface-container-highest/30 rounded-xl touch-target-min active:scale-90 duration-150">
+<span class="material-symbols-outlined text-[24px]" data-icon="confirmation_number">confirmation_number</span>
+<span class="text-label-sm font-label-sm mt-0.5">Tickets</span>
+</button>
+<!-- Tab 4: Alerts -->
+<button class="flex flex-col items-center justify-center text-secondary dark:text-secondary hover:text-on-surface dark:hover:text-on-surface transition-colors hover:bg-surface-container-highest/30 dark:hover:bg-surface-container-highest/30 rounded-xl touch-target-min active:scale-90 duration-150 relative">
+<span class="material-symbols-outlined text-[24px]" data-icon="notifications">notifications</span>
+<span class="text-label-sm font-label-sm mt-0.5">Alerts</span>
+<span class="absolute top-1 right-3 w-2 h-2 rounded-full bg-primary-container"></span>
+</button>
+<!-- Tab 5: Profile -->
+<button class="flex flex-col items-center justify-center text-secondary dark:text-secondary hover:text-on-surface dark:hover:text-on-surface transition-colors hover:bg-surface-container-highest/30 dark:hover:bg-surface-container-highest/30 rounded-xl touch-target-min active:scale-90 duration-150">
+<span class="material-symbols-outlined text-[24px]" data-icon="person">person</span>
+<span class="text-label-sm font-label-sm mt-0.5">Profile</span>
+</button>
+</nav>
+</div>
+<script>
+    // Lightweight micro-interaction script for responsive feedback
+    document.addEventListener('DOMContentLoaded', () => {
+      const searchInput = document.querySelector('input[type="text"]');
+      if (searchInput) {
+        searchInput.addEventListener('focus', () => {
+          searchInput.parentElement.classList.add('ring-2', 'ring-primary-container/30');
+        });
+        searchInput.addEventListener('blur', () => {
+          searchInput.parentElement.classList.remove('ring-2', 'ring-primary-container/30');
+        });
+      }
+    });
+  </script>
+</body></html>

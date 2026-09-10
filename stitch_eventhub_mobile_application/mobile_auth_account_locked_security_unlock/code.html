@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="vi"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>EventHub - Xác Thực An Ninh Tài Khoản</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Inter:wght@100..900&display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "surface-container-high": "#21293f",
+            "tertiary-fixed-dim": "#ddb7ff",
+            "on-primary-fixed-variant": "#783200",
+            "secondary": "#b0cadd",
+            "on-tertiary": "#490080",
+            "error": "#ffb4ab",
+            "on-tertiary-fixed-variant": "#6900b3",
+            "on-primary-fixed": "#341100",
+            "surface-tint": "#ffb690",
+            "surface": "#0a1328",
+            "primary-fixed": "#ffdbca",
+            "surface-variant": "#2c344b",
+            "on-secondary-fixed": "#021e2c",
+            "outline": "#a78b7d",
+            "surface-container": "#161f35",
+            "surface-dim": "#0a1328",
+            "secondary-container": "#334c5c",
+            "inverse-on-surface": "#273046",
+            "on-surface": "#dae2ff",
+            "on-error-container": "#ffdad6",
+            "tertiary-container": "#be7bff",
+            "surface-container-highest": "#2c344b",
+            "on-tertiary-fixed": "#2c0051",
+            "on-secondary-container": "#a2bcce",
+            "outline-variant": "#584237",
+            "tertiary": "#ddb7ff",
+            "error-container": "#93000a",
+            "inverse-surface": "#dae2ff",
+            "on-surface-variant": "#e0c0b1",
+            "background": "#0a1328",
+            "surface-bright": "#303950",
+            "tertiary-fixed": "#f0dbff",
+            "on-secondary-fixed-variant": "#314a59",
+            "on-secondary": "#1a3342",
+            "on-error": "#690005",
+            "primary": "#ffb690",
+            "secondary-fixed-dim": "#b0cadd",
+            "primary-fixed-dim": "#ffb690",
+            "secondary-fixed": "#cce6fa",
+            "on-primary": "#552100",
+            "surface-container-low": "#121b30",
+            "surface-container-lowest": "#050d22",
+            "primary-container": "#f97316",
+            "on-background": "#dae2ff",
+            "on-primary-container": "#582200",
+            "inverse-primary": "#9d4300",
+            "on-tertiary-container": "#4c0084"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "space-md": "1rem",
+            "space-lg": "1.25rem",
+            "space-2xl": "2rem",
+            "nav-bottom-height": "4rem",
+            "space-xl": "1.5rem",
+            "gutter-grid": "0.75rem",
+            "space-2xs": "0.25rem",
+            "touch-target-min": "2.75rem",
+            "space-sm": "0.75rem",
+            "margin-screen": "1rem",
+            "space-xs": "0.5rem",
+            "space-3xl": "2.5rem"
+          },
+          "fontFamily": {
+            "label-sm": ["Inter"],
+            "body-lg": ["Inter"],
+            "headline-xl": ["Geist"],
+            "body-lg-medium": ["Inter"],
+            "body-md": ["Inter"],
+            "label-md": ["Inter"],
+            "headline-md": ["Geist"],
+            "headline-xl-mobile": ["Geist"],
+            "code-ticket": ["Geist"],
+            "body-md-medium": ["Inter"],
+            "headline-sm": ["Geist"],
+            "headline-lg": ["Geist"]
+          },
+          "fontSize": {
+            "label-sm": ["11px", {"lineHeight": "14px", "letterSpacing": "0.04em", "fontWeight": "600"}],
+            "body-lg": ["16px", {"lineHeight": "24px", "letterSpacing": "0em", "fontWeight": "400"}],
+            "headline-xl": ["36px", {"lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+            "body-lg-medium": ["16px", {"lineHeight": "24px", "letterSpacing": "0em", "fontWeight": "500"}],
+            "body-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0em", "fontWeight": "400"}],
+            "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "600"}],
+            "headline-md": ["20px", {"lineHeight": "26px", "letterSpacing": "-0.005em", "fontWeight": "600"}],
+            "headline-xl-mobile": ["28px", {"lineHeight": "34px", "letterSpacing": "-0.015em", "fontWeight": "700"}],
+            "code-ticket": ["15px", {"lineHeight": "20px", "letterSpacing": "0.08em", "fontWeight": "600"}],
+            "body-md-medium": ["14px", {"lineHeight": "20px", "letterSpacing": "0.005em", "fontWeight": "500"}],
+            "headline-sm": ["18px", {"lineHeight": "24px", "letterSpacing": "0em", "fontWeight": "600"}],
+            "headline-lg": ["24px", {"lineHeight": "30px", "letterSpacing": "-0.01em", "fontWeight": "600"}]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      display: inline-block;
+      vertical-align: middle;
+      line-height: 1;
+    }
+    .material-symbols-outlined.fill {
+      font-variation-settings: 'FILL' 1;
+    }
+    @keyframes pulse-glow {
+      0%, 100% {
+        box-shadow: 0 0 24px rgba(239, 68, 68, 0.45), 0 0 60px rgba(239, 68, 68, 0.15);
+      }
+      50% {
+        box-shadow: 0 0 36px rgba(239, 68, 68, 0.7), 0 0 80px rgba(239, 68, 68, 0.3);
+      }
+    }
+    .red-glow {
+      animation: pulse-glow 3s infinite ease-in-out;
+    }
+    .cta-shadow {
+      box-shadow: 0 8px 24px rgba(249, 115, 22, 0.35);
+    }
+    .cta-shadow:active {
+      box-shadow: 0 4px 12px rgba(249, 115, 22, 0.2);
+    }
+    .noise-overlay {
+      background-image: radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 0);
+      background-size: 16px 16px;
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface-container-lowest text-on-surface font-body-md antialiased min-h-screen flex flex-col items-center justify-start p-0 m-0 select-none overflow-x-hidden">
+<!-- Top App Bar (Docked Anchor from JSON) -->
+<header class="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-space-md h-14 max-w-lg mx-auto w-full bg-surface/90 backdrop-blur-md shadow-sm">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary" data-icon="local_activity">local_activity</span>
+<span class="text-headline-sm font-headline-sm font-bold text-primary tracking-tight">EventHub</span>
+</div>
+<div class="flex items-center gap-2">
+<button aria-label="Security Alert Notification" class="w-10 h-10 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container-highest/50 transition-colors relative">
+<span class="material-symbols-outlined text-error" data-icon="notifications" style="font-variation-settings: 'FILL' 1;">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 rounded-full bg-error ring-2 ring-surface"></span>
+</button>
+</div>
+</header>
+<!-- Mobile Content Canvas (Transactional & Security Locked: Shell Navigation Suppressed) -->
+<main class="w-full max-w-lg mx-auto pt-16 pb-12 px-space-md flex flex-col gap-space-md min-h-screen relative">
+<!-- Background atmospheric glow effects -->
+<div class="absolute top-12 left-1/2 -translate-x-1/2 w-64 h-64 bg-error-container/20 rounded-full blur-3xl pointer-events-none -z-10"></div>
+<div class="absolute top-96 right-0 w-48 h-48 bg-primary-container/10 rounded-full blur-3xl pointer-events-none -z-10"></div>
+<!-- Security Header Card -->
+<section class="flex flex-col items-center text-center mt-2 px-space-xs">
+<!-- Warning Glowing Reticle -->
+<div class="relative mb-space-sm flex items-center justify-center">
+<div class="w-20 h-20 rounded-full bg-error-container/30 border border-error/50 flex items-center justify-center red-glow backdrop-blur-sm">
+<div class="w-14 h-14 rounded-full bg-error/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-error text-[36px]" data-icon="lock" style="font-variation-settings: 'FILL' 1;">lock</span>
+</div>
+</div>
+<div class="absolute -top-1 -right-1 bg-surface-container-high border border-error/40 rounded-full px-2 py-0.5 flex items-center gap-1 shadow-md">
+<span class="w-1.5 h-1.5 rounded-full bg-error animate-ping"></span>
+<span class="font-label-sm text-label-sm text-error uppercase tracking-wider">Cảnh báo</span>
+</div>
+</div>
+<!-- Headline -->
+<h1 class="font-headline-xl-mobile text-headline-xl-mobile text-on-surface tracking-tight mb-1">
+        Tài Khoản Tạm Thời Bị Khóa
+      </h1>
+<p class="font-body-md text-body-md text-secondary max-w-xs">
+        Hệ thống phát hiện hoạt động đăng nhập bất thường nhằm bảo vệ tài sản vé và số dư sự kiện.
+      </p>
+</section>
+<!-- Alert Banner (Red border and soft red tint) -->
+<div class="w-full p-space-sm rounded-xl bg-error-container/25 border border-error/40 flex items-start gap-3 backdrop-blur-md">
+<span class="material-symbols-outlined text-error text-[22px] flex-shrink-0 mt-0.5" data-icon="gpp_bad" style="font-variation-settings: 'FILL' 1;">gpp_bad</span>
+<div class="flex-1">
+<p class="font-label-md text-label-md text-error font-semibold mb-0.5">Phát hiện truy cập trái phép</p>
+<p class="font-body-md text-body-md text-on-surface/90 leading-snug">
+          Phát hiện 5 lần nhập sai mật khẩu liên tiếp từ địa chỉ IP lạ (<span class="font-semibold text-white">TP.HCM, 14:28:10</span>)
+        </p>
+</div>
+</div>
+<!-- Information Card (Tier 1 Surface Container) -->
+<div class="w-full bg-surface-container/90 border border-secondary/15 rounded-2xl p-space-md noise-overlay shadow-sm flex flex-col gap-3">
+<div class="flex items-center justify-between pb-2.5 border-b border-surface-variant/40">
+<span class="font-body-md text-body-md text-secondary flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[18px] text-secondary" data-icon="badge">badge</span>
+          Mã định danh tài khoản:
+        </span>
+<span class="font-code-ticket text-code-ticket text-primary font-bold bg-surface-container-high px-2 py-0.5 rounded-md border border-secondary/20 tracking-wider">
+          EH-USR-99281
+        </span>
+</div>
+<div class="flex items-start justify-between pb-2.5 border-b border-surface-variant/40">
+<span class="font-body-md text-body-md text-secondary flex items-center gap-1.5 pt-0.5">
+<span class="material-symbols-outlined text-[18px] text-secondary" data-icon="timer">timer</span>
+          Thời gian khóa:
+        </span>
+<span class="font-body-md-medium text-body-md-medium text-on-surface text-right max-w-[210px]">
+          24 giờ <span class="text-secondary font-normal">(hoặc mở khóa ngay qua xác thực danh tính eKYC)</span>
+</span>
+</div>
+<div class="flex items-start justify-between">
+<span class="font-body-md text-body-md text-secondary flex items-center gap-1.5 pt-0.5">
+<span class="material-symbols-outlined text-[18px] text-secondary" data-icon="shield">shield</span>
+          Lý do:
+        </span>
+<span class="font-body-md-medium text-body-md-medium text-tertiary-fixed-dim text-right max-w-[210px]">
+          Bảo vệ vé điện tử và số dư ví thanh toán của bạn
+        </span>
+</div>
+</div>
+<!-- Step-by-step Unlock Options (Selection UI) -->
+<section class="flex flex-col gap-2.5">
+<div class="flex items-center justify-between px-1">
+<h2 class="font-label-md text-label-md text-secondary uppercase tracking-wider">Chọn phương thức mở khóa</h2>
+<span class="font-label-sm text-label-sm text-primary flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]" data-icon="verified_user">verified_user</span>
+          Mã hóa chuẩn PCI-DSS
+        </span>
+</div>
+<!-- Option A (Recommended / Khuyen Dung) -->
+<label class="cursor-pointer relative flex items-start gap-3.5 p-space-md rounded-2xl bg-surface-container border-2 border-primary-container/80 shadow-md transition-all active:scale-[0.99]">
+<input checked="" class="mt-1 w-5 h-5 text-primary-container focus:ring-primary-container bg-surface-container-high border-secondary/40" name="unlock_method" type="radio" value="ekyc"/>
+<div class="flex-1 flex flex-col gap-1.5">
+<div class="flex items-center justify-between flex-wrap gap-1">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-primary text-[20px]" data-icon="photo_camera_front" style="font-variation-settings: 'FILL' 1;">photo_camera_front</span>
+<span class="font-body-lg-medium text-body-lg-medium text-white font-semibold">Mở khóa tức thì bằng CCCD / eKYC khuôn mặt</span>
+</div>
+</div>
+<p class="font-body-md text-body-md text-secondary">
+            Quét khuôn mặt trực diện và đối soát ảnh chụp căn cước để khôi phục quyền truy cập ví vé ngay.
+          </p>
+<div class="flex items-center gap-2 mt-1">
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-label-sm font-label-sm bg-primary-container/20 text-primary border border-primary-container/40">
+<span class="material-symbols-outlined text-[14px]" data-icon="bolt">bolt</span>
+              Khuyên dùng
+            </span>
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-label-sm font-label-sm bg-tertiary/15 text-tertiary border border-tertiary/30">
+<span class="material-symbols-outlined text-[14px]" data-icon="schedule">schedule</span>
+              Tự động 60 giây
+            </span>
+</div>
+</div>
+</label>
+<!-- Option B (Email Backup) -->
+<label class="cursor-pointer relative flex items-start gap-3.5 p-space-md rounded-2xl bg-surface-container-low border border-secondary/20 hover:border-secondary/40 transition-all active:scale-[0.99]">
+<input class="mt-1 w-5 h-5 text-primary-container focus:ring-primary-container bg-surface-container-high border-secondary/40" name="unlock_method" type="radio" value="email"/>
+<div class="flex-1 flex flex-col gap-1">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-secondary text-[20px]" data-icon="mail">mail</span>
+<span class="font-body-lg-medium text-body-lg-medium text-on-surface font-medium">Nhận liên kết mở khóa qua Email chính chủ</span>
+</div>
+<p class="font-body-md text-body-md text-secondary">
+            Gửi mã token xác thực dùng một lần tới hòm thư được liên kết: <span class="text-on-surface font-semibold">ng***@gmail.com</span>
+</p>
+<div class="mt-1">
+<span class="inline-flex items-center gap-1 text-label-sm font-label-sm text-secondary">
+<span class="material-symbols-outlined text-[14px]" data-icon="hourglass_top">hourglass_top</span>
+              Xử lý trong khoảng 5 - 15 phút
+            </span>
+</div>
+</div>
+</label>
+</section>
+<!-- Action Buttons Group -->
+<section class="flex flex-col gap-3 mt-1">
+<!-- Primary CTA: Vibrant Orange button with FaceID icon -->
+<button class="w-full min-h-[50px] rounded-xl bg-primary-container hover:bg-primary-container/90 text-white font-body-md-medium text-body-md-medium flex items-center justify-center gap-2 cta-shadow active:scale-[0.98] transition-transform duration-150" id="primary-action">
+<span class="material-symbols-outlined text-[22px]" data-icon="face" style="font-variation-settings: 'FILL' 1;">face</span>
+<span class="tracking-wide">Xác Thực Danh Tính Để Mở Khóa</span>
+</button>
+<!-- Secondary button: Bordered slate button -->
+<button class="w-full min-h-[48px] rounded-xl bg-surface-container-high/40 hover:bg-surface-container-high border border-[#2b5c92] text-on-surface font-body-md-medium text-body-md-medium flex items-center justify-center gap-2 active:scale-[0.98] transition-colors">
+<span class="material-symbols-outlined text-secondary text-[20px]" data-icon="forward_to_inbox">forward_to_inbox</span>
+<span>Gửi Email Xác Minh Khẩn Cấp</span>
+</button>
+</section>
+<!-- Footer Support Information -->
+<footer class="mt-2 pt-space-sm border-t border-surface-variant/30 text-center pb-6">
+<p class="font-body-md text-body-md text-secondary mb-2">
+        Cần hỗ trợ trực tiếp? Gọi Hotline Trung tâm An ninh EventHub:
+      </p>
+<div class="flex items-center justify-center gap-3 flex-wrap">
+<a class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-container border border-secondary/20 text-primary font-code-ticket text-code-ticket hover:bg-surface-container-high transition-colors" href="tel:19006868">
+<span class="material-symbols-outlined text-[18px]" data-icon="call">call</span>
+          1900 6868
+        </a>
+<span class="text-secondary/40">•</span>
+<button class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-container border border-secondary/20 text-on-surface hover:text-primary font-body-md-medium text-body-md-medium transition-colors">
+<span class="material-symbols-outlined text-[18px] text-tertiary" data-icon="support_agent">support_agent</span>
+          Chat với Hỗ trợ viên
+        </button>
+</div>
+<p class="font-label-sm text-label-sm text-secondary/60 mt-4">
+        Mã phiên bảo mật: SEC-SESSION-482024-VN • Hệ thống giám sát 24/7
+      </p>
+</footer>
+</main>
+<script>
+    // Micro-interaction for radio selection updating Primary CTA button text & style
+    const radioInputs = document.querySelectorAll('input[name="unlock_method"]');
+    const primaryBtn = document.getElementById('primary-action');
+
+    radioInputs.forEach(input => {
+      input.addEventListener('change', (e) => {
+        if (e.target.value === 'ekyc') {
+          primaryBtn.innerHTML = `
+            <span class="material-symbols-outlined text-[22px]" data-icon="face" style="font-variation-settings: 'FILL' 1;">face</span>
+            <span class="tracking-wide">Xác Thực Danh Tính Để Mở Khóa</span>
+          `;
+        } else {
+          primaryBtn.innerHTML = `
+            <span class="material-symbols-outlined text-[22px]" data-icon="send">send</span>
+            <span class="tracking-wide">Gửi Mã Xác Minh Đến Email</span>
+          `;
+        }
+      });
+    });
+  </script>
+</body></html>

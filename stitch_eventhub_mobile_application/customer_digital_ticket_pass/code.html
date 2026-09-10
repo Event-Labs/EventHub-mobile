@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>EventHub - My Tickets & Digital Gate Pass</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Inter:wght@100..900&display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "on-primary-fixed": "#341100",
+            "on-surface-variant": "#e0c0b1",
+            "inverse-primary": "#9d4300",
+            "secondary-container": "#334c5c",
+            "outline-variant": "#584237",
+            "surface-container-highest": "#2c344b",
+            "surface-container": "#161f35",
+            "inverse-on-surface": "#273046",
+            "inverse-surface": "#dae2ff",
+            "on-secondary": "#1a3342",
+            "on-tertiary-container": "#4c0084",
+            "surface-bright": "#303950",
+            "error-container": "#93000a",
+            "on-error-container": "#ffdad6",
+            "tertiary-fixed-dim": "#ddb7ff",
+            "tertiary-container": "#be7bff",
+            "on-tertiary-fixed-variant": "#6900b3",
+            "on-tertiary": "#490080",
+            "surface-container-low": "#121b30",
+            "on-primary": "#552100",
+            "primary-fixed-dim": "#ffb690",
+            "on-background": "#dae2ff",
+            "background": "#0a1328",
+            "surface-container-lowest": "#050d22",
+            "primary-container": "#f97316",
+            "on-primary-fixed-variant": "#783200",
+            "secondary-fixed": "#cce6fa",
+            "on-secondary-fixed-variant": "#314a59",
+            "secondary": "#b0cadd",
+            "primary-fixed": "#ffdbca",
+            "surface": "#0a1328",
+            "surface-variant": "#2c344b",
+            "on-error": "#690005",
+            "tertiary": "#ddb7ff",
+            "tertiary-fixed": "#f0dbff",
+            "on-secondary-fixed": "#021e2c",
+            "surface-dim": "#0a1328",
+            "surface-container-high": "#21293f",
+            "on-surface": "#dae2ff",
+            "on-primary-container": "#582200",
+            "secondary-fixed-dim": "#b0cadd",
+            "on-tertiary-fixed": "#2c0051",
+            "surface-tint": "#ffb690",
+            "primary": "#ffb690",
+            "outline": "#a78b7d",
+            "on-secondary-container": "#a2bcce",
+            "error": "#ffb4ab"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "margin-screen": "1rem",
+            "gutter-grid": "0.75rem",
+            "space-md": "1rem",
+            "touch-target-min": "2.75rem",
+            "nav-bottom-height": "4rem",
+            "space-xl": "1.5rem",
+            "space-2xl": "2rem",
+            "space-xs": "0.5rem",
+            "space-3xl": "2.5rem",
+            "space-lg": "1.25rem",
+            "space-sm": "0.75rem",
+            "space-2xs": "0.25rem"
+          },
+          "fontFamily": {
+            "body-md": ["Inter"],
+            "body-lg-medium": ["Inter"],
+            "headline-md": ["Geist"],
+            "label-sm": ["Inter"],
+            "body-md-medium": ["Inter"],
+            "headline-lg": ["Geist"],
+            "headline-sm": ["Geist"],
+            "headline-xl": ["Geist"],
+            "headline-xl-mobile": ["Geist"],
+            "label-md": ["Inter"],
+            "code-ticket": ["Geist"],
+            "body-lg": ["Inter"]
+          },
+          "fontSize": {
+            "body-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0em", "fontWeight": "400" }],
+            "body-lg-medium": ["16px", { "lineHeight": "24px", "letterSpacing": "0em", "fontWeight": "500" }],
+            "headline-md": ["20px", { "lineHeight": "26px", "letterSpacing": "-0.005em", "fontWeight": "600" }],
+            "label-sm": ["11px", { "lineHeight": "14px", "letterSpacing": "0.04em", "fontWeight": "600" }],
+            "body-md-medium": ["14px", { "lineHeight": "20px", "letterSpacing": "0.005em", "fontWeight": "500" }],
+            "headline-lg": ["24px", { "lineHeight": "30px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+            "headline-sm": ["18px", { "lineHeight": "24px", "letterSpacing": "0em", "fontWeight": "600" }],
+            "headline-xl": ["36px", { "lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+            "headline-xl-mobile": ["28px", { "lineHeight": "34px", "letterSpacing": "-0.015em", "fontWeight": "700" }],
+            "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "600" }],
+            "code-ticket": ["15px", { "lineHeight": "20px", "letterSpacing": "0.08em", "fontWeight": "600" }],
+            "body-lg": ["16px", { "lineHeight": "24px", "letterSpacing": "0em", "fontWeight": "400" }]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-family: 'Material Symbols Outlined';
+      font-weight: normal;
+      font-style: normal;
+      font-size: 22px;
+      line-height: 1;
+      display: inline-block;
+      text-transform: none;
+      letter-spacing: normal;
+      word-wrap: normal;
+      white-space: nowrap;
+      direction: ltr;
+    }
+    /* Ticket perforation punch-holes */
+    .notch-left {
+      position: absolute;
+      left: -12px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 24px;
+      height: 24px;
+      border-radius: 9999px;
+      background-color: #081126;
+      box-shadow: inset -2px 0 3px rgba(0, 0, 0, 0.4);
+      z-index: 10;
+    }
+    .notch-right {
+      position: absolute;
+      right: -12px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 24px;
+      height: 24px;
+      border-radius: 9999px;
+      background-color: #081126;
+      box-shadow: inset 2px 0 3px rgba(0, 0, 0, 0.4);
+      z-index: 10;
+    }
+    .neon-pulse-glow {
+      box-shadow: 0 0 25px rgba(249, 115, 22, 0.28), 0 0 8px rgba(249, 115, 22, 0.4);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-[#081126] text-on-surface font-body-md antialiased min-h-screen flex justify-center selection:bg-primary-container selection:text-on-primary">
+<!-- Mobile Container (390px viewport shell) -->
+<div class="w-full max-w-[420px] min-h-screen bg-[#081126] flex flex-col relative pb-[96px] overflow-x-hidden border-x border-surface-container-highest/20">
+<!-- Top App Bar (Shared Component Anchor) -->
+<header class="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-space-md h-14 max-w-lg mx-auto w-full bg-surface/90 dark:bg-surface/90 backdrop-blur-md border-b border-outline-variant/30 dark:border-outline-variant/30 shadow-sm dark:shadow-none">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-primary-container text-[24px]" data-icon="local_activity">local_activity</span>
+<span class="text-headline-sm font-headline-sm font-bold text-primary dark:text-primary tracking-tight">EventHub</span>
+</div>
+<div class="flex items-center gap-2">
+<button class="w-10 h-10 rounded-full flex items-center justify-center hover:bg-surface-container-highest/50 dark:hover:bg-surface-container-highest/50 transition-colors active:scale-95 transition-transform duration-150 text-on-surface-variant dark:text-on-surface-variant" type="button">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-1 px-space-md pt-16 mt-2 flex flex-col gap-4">
+<!-- Page Title & Segmented Status Controls -->
+<section class="flex flex-col gap-3 pt-1">
+<div class="flex items-center justify-between">
+<h1 class="font-headline-xl-mobile text-headline-xl-mobile text-on-surface tracking-tight">My Tickets</h1>
+<span class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-950/60 border border-emerald-500/30 text-emerald-400 font-label-sm text-label-sm">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+            Sync Active
+          </span>
+</div>
+<!-- Segmented Tab Filter -->
+<div class="p-1 rounded-xl bg-surface-container flex items-center gap-1 border border-surface-container-highest/60">
+<button class="flex-1 py-1.5 px-3 rounded-lg bg-primary-container text-white font-label-md text-label-md shadow-md text-center transition-all" type="button">
+            Upcoming (2)
+          </button>
+<button class="flex-1 py-1.5 px-3 rounded-lg text-secondary hover:text-on-surface font-label-md text-label-md text-center transition-colors" type="button">
+            Attended (5)
+          </button>
+<button class="flex-1 py-1.5 px-3 rounded-lg text-secondary/60 hover:text-secondary font-label-md text-label-md text-center transition-colors" type="button">
+            Cancelled (0)
+          </button>
+</div>
+</section>
+<!-- ACTIVE PASS: PERFORATED TICKET CARD -->
+<article class="relative w-full rounded-2xl bg-[#0c1446] border border-secondary/15 shadow-2xl overflow-visible mt-1 neon-pulse-glow">
+<!-- Top Section: Event Hero, Artwork, and Metadata -->
+<div class="p-4 pb-3">
+<!-- Artwork Banner -->
+<div class="relative w-full h-36 rounded-xl overflow-hidden mb-3 border border-white/10">
+<img class="w-full h-full object-cover" data-alt="Vibrant night festival stage at Neon Horizon with cosmic lasers, deep blue and saturated orange stage lights, thick atmospheric haze, and enthusiastic silhouettes in front of a futuristic EDM stage structure." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDizCDL9or6BltrpTj17xwGdhtdNtLpAAHSMB0dBAy531hTbm9eFjDibe4KM4KfuBEbOxSD02vIBgSQ2mGuN1wfAxWGaPA9lLyOkVfMjt2SyRTlHC_P4KoF9nTSfTJwLT5wHZnQhQGAOUtpboD0OiCWTFE9GhuLYNcplORkdO8BYNIfqNLS3QtBvZr5ukyDRh0XmIX1g9OZ5b8SE0cGmR5KWR1xx1ci-eWs9p-JxlWUZqCeGa0NtmZK"/>
+<div class="absolute inset-0 bg-gradient-to-t from-[#0c1446] via-transparent to-black/40"></div>
+<!-- Tier Badge -->
+<div class="absolute top-2.5 left-2.5 flex items-center gap-1 bg-primary-container px-2.5 py-1 rounded-full text-white font-label-sm text-label-sm tracking-wide shadow-lg">
+<span class="material-symbols-outlined text-[14px]" data-icon="stars" style="font-variation-settings: 'FILL' 1;">stars</span>
+              VIP EARLY ACCESS
+            </div>
+<!-- Gate Pass Tag -->
+<div class="absolute top-2.5 right-2.5 bg-black/60 backdrop-blur-md px-2 py-0.5 rounded-md border border-white/20 text-secondary-fixed text-[10px] font-mono">
+              SECURE NFC
+            </div>
+</div>
+<!-- Event Title & Info -->
+<div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface tracking-tight leading-snug">
+              NEON HORIZON FESTIVAL 2025
+            </h2>
+<div class="mt-2.5 flex flex-col gap-1.5">
+<div class="flex items-center gap-2 text-secondary font-body-md-medium text-body-md-medium">
+<span class="material-symbols-outlined text-primary text-[18px]" data-icon="calendar_today">calendar_today</span>
+<span>Sat, Dec 28, 2024 • Gate opens 16:30</span>
+</div>
+<div class="flex items-center gap-2 text-secondary/80 font-body-md text-body-md">
+<span class="material-symbols-outlined text-secondary text-[18px]" data-icon="location_on">location_on</span>
+<span class="truncate">SECC Exhibition Hall A, TP. Hồ Chí Minh</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Perforated Notch Divider Area -->
+<div class="relative h-6 w-full flex items-center my-0">
+<div class="notch-left"></div>
+<div class="notch-right"></div>
+<!-- Realistic dashed perforation line -->
+<div class="w-full mx-6 border-b-2 border-dashed border-[#2b5c92]/50"></div>
+</div>
+<!-- Bottom Section: QR Pass, Credentials & Scannability -->
+<div class="p-4 pt-1 flex flex-col items-center">
+<!-- High-Contrast QR Code Display Plate -->
+<div class="relative mt-2 p-3 bg-white rounded-xl shadow-inner flex flex-col items-center justify-center">
+<!-- Simulated High Density Gate QR Matrix -->
+<div class="w-44 h-44 bg-white flex flex-col justify-between p-1.5">
+<div class="w-full flex justify-between">
+<div class="w-12 h-12 border-[5px] border-black p-1 flex items-center justify-center">
+<div class="w-4 h-4 bg-black"></div>
+</div>
+<div class="flex-1 px-2 flex flex-wrap gap-1 content-start py-0.5">
+<div class="w-3 h-2 bg-black"></div><div class="w-2 h-2 bg-black"></div><div class="w-4 h-2 bg-black"></div>
+<div class="w-2 h-3 bg-black"></div><div class="w-3 h-1 bg-black"></div><div class="w-5 h-2 bg-black"></div>
+</div>
+<div class="w-12 h-12 border-[5px] border-black p-1 flex items-center justify-center">
+<div class="w-4 h-4 bg-black"></div>
+</div>
+</div>
+<div class="w-full flex justify-between py-1.5 items-center">
+<div class="flex flex-col gap-1 w-10">
+<div class="w-6 h-2 bg-black"></div>
+<div class="w-8 h-3 bg-black"></div>
+<div class="w-4 h-2 bg-black"></div>
+</div>
+<!-- Brand Badge Inside QR -->
+<div class="w-10 h-10 rounded-lg bg-[#081126] flex items-center justify-center border-2 border-primary-container">
+<span class="material-symbols-outlined text-primary-container text-[20px]" data-icon="qr_code_2">qr_code_2</span>
+</div>
+<div class="flex flex-col gap-1 w-10 items-end">
+<div class="w-7 h-2 bg-black"></div>
+<div class="w-5 h-3 bg-black"></div>
+<div class="w-8 h-1 bg-black"></div>
+</div>
+</div>
+<div class="w-full flex justify-between items-end">
+<div class="w-12 h-12 border-[5px] border-black p-1 flex items-center justify-center">
+<div class="w-4 h-4 bg-black"></div>
+</div>
+<div class="flex-1 px-2 flex flex-wrap gap-1 content-end py-0.5">
+<div class="w-4 h-2 bg-black"></div><div class="w-2 h-3 bg-black"></div><div class="w-3 h-1 bg-black"></div>
+<div class="w-3 h-2 bg-black"></div><div class="w-4 h-3 bg-black"></div><div class="w-2 h-1 bg-black"></div>
+</div>
+<div class="w-10 h-10 flex flex-wrap gap-1 p-1 bg-black/10">
+<div class="w-3 h-3 bg-black"></div><div class="w-2 h-3 bg-black"></div>
+<div class="w-4 h-2 bg-black"></div><div class="w-2 h-2 bg-black"></div>
+</div>
+</div>
+</div>
+<!-- Dynamic Scan Bar Overlay Indicator -->
+<div class="w-full mt-2 pt-1 border-t border-slate-200 flex items-center justify-between text-slate-700">
+<span class="text-[10px] tracking-wider uppercase font-semibold text-slate-500">Live Scannable</span>
+<span class="text-[11px] font-mono font-bold text-slate-900">UPDATED NOW</span>
+</div>
+</div>
+<!-- Ticket Identifier -->
+<div class="mt-2.5 flex items-center gap-1.5">
+<span class="font-code-ticket text-code-ticket text-primary-fixed tracking-widest uppercase">
+              TICKET ID: #EH-9482-VIP
+            </span>
+<button class="text-secondary hover:text-white transition-colors" title="Copy ID" type="button">
+<span class="material-symbols-outlined text-[16px]" data-icon="content_copy">content_copy</span>
+</button>
+</div>
+<!-- Brightness Tip Banner Pill -->
+<div class="mt-2.5 w-full bg-[#122155] border border-secondary/20 rounded-full py-1.5 px-3 flex items-center justify-center gap-1.5 text-secondary text-label-sm font-label-sm">
+<span>💡</span>
+<span>Auto-brightness boosts for gate scanner</span>
+</div>
+<!-- Attendee Specs Dossier Grid -->
+<div class="w-full grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-surface-container-highest/60 text-center">
+<div class="flex flex-col items-center">
+<span class="font-label-sm text-label-sm text-secondary/70 uppercase tracking-wider">Attendee</span>
+<span class="font-body-md-medium text-body-md-medium text-on-surface font-semibold truncate max-w-[100px] mt-0.5">Nguyen Van An</span>
+</div>
+<div class="flex flex-col items-center border-x border-surface-container-highest/60 px-1">
+<span class="font-label-sm text-label-sm text-secondary/70 uppercase tracking-wider">Zone</span>
+<span class="font-body-md-medium text-body-md-medium text-primary-container font-semibold truncate max-w-[100px] mt-0.5">Zone A - Standing</span>
+</div>
+<div class="flex flex-col items-center">
+<span class="font-label-sm text-label-sm text-secondary/70 uppercase tracking-wider">Gate</span>
+<span class="font-body-md-medium text-body-md-medium text-emerald-400 font-semibold truncate max-w-[80px] mt-0.5">Gate 02</span>
+</div>
+</div>
+</div>
+</article>
+<!-- Quick Action Buttons -->
+<section class="flex flex-col gap-2.5 mt-1">
+<!-- Add to Apple Wallet (Primary dark pill with Apple aesthetic) -->
+<button class="w-full h-12 bg-black hover:bg-black/90 active:scale-[0.98] border border-white/20 rounded-xl px-4 flex items-center justify-center gap-2.5 text-white font-body-md-medium text-body-md-medium shadow-lg transition-transform duration-150" type="button">
+<span class="material-symbols-outlined text-[20px]" data-icon="wallet">wallet</span>
+<span>Save to Apple Wallet</span>
+</button>
+<!-- Secondary Actions Row -->
+<div class="grid grid-cols-2 gap-2.5">
+<button class="h-11 bg-[#122155] hover:bg-surface-container-highest active:scale-[0.98] border border-secondary/25 rounded-xl px-3 flex items-center justify-center gap-1.5 text-on-surface font-body-md-medium text-body-md-medium transition-all" type="button">
+<span class="material-symbols-outlined text-primary text-[18px]" data-icon="picture_as_pdf">picture_as_pdf</span>
+<span class="text-sm">Download PDF</span>
+</button>
+<button class="h-11 bg-[#122155] hover:bg-surface-container-highest active:scale-[0.98] border border-secondary/25 rounded-xl px-3 flex items-center justify-center gap-1.5 text-on-surface font-body-md-medium text-body-md-medium transition-all" type="button">
+<span class="material-symbols-outlined text-secondary text-[18px]" data-icon="send">send</span>
+<span class="text-sm">Transfer Ticket</span>
+</button>
+</div>
+</section>
+<!-- Collapsed Second Upcoming Ticket Card Preview -->
+<section class="mt-2 mb-4">
+<div class="flex items-center justify-between mb-2 px-1">
+<span class="font-label-md text-label-md text-secondary">Next Upcoming Pass (2 of 2)</span>
+<span class="text-xs text-primary cursor-pointer hover:underline">View Details</span>
+</div>
+<article class="w-full bg-[#0c1446]/80 hover:bg-[#0c1446] border border-secondary/15 rounded-xl p-3 flex items-center justify-between transition-colors cursor-pointer">
+<div class="flex items-center gap-3">
+<div class="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 border border-white/10">
+<img class="w-full h-full object-cover" data-alt="Atmospheric cyber synthwave DJ performance at midnight with deep neon cyan and purple backdrops and futuristic light arrays reflecting off an acoustic performance stage." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBtQ4SBLmWXcPB-qon1RQlONN1-CJGlArGmUit4LufFvqi2fxto0tCqbXRsrBvUPnBJ_LNnrEH1IGvtLlVBh3-OYkPDcsAJjJiDowIdiAfHDMTJ-C82svrpnS8NsuUhHZXAYoWkPV7-h45m2M4CWe99oaJg0s1pkpsGsz0rn40HOxLTWDTNUzZcOI1bfLBe8qMAARIIxVEYRaweIItHNjyYBoPgf_oQwgYc-_6BX4aC1Jr07TzkX1Ij"/>
+</div>
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-primary-container uppercase font-semibold">GA Regular</span>
+<h3 class="font-headline-sm text-[15px] leading-tight text-on-surface line-clamp-1">CYBERPUNK MIDNIGHT RAVE</h3>
+<span class="text-xs text-secondary/80 mt-0.5">Jan 12, 2025 • Gate 01</span>
+</div>
+</div>
+<div class="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined text-[18px]" data-icon="chevron_right">chevron_right</span>
+</div>
+</article>
+</section>
+</main>
+<!-- Bottom Nav Bar (Shared Component Anchor) -->
+<!-- Active state applied autonomously to 'Tickets' matching primary intent -->
+<nav class="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around h-nav-bottom-height max-w-lg mx-auto w-full px-space-xs bg-surface-container-lowest/90 dark:bg-surface-container-lowest/90 backdrop-blur-md shadow-lg dark:shadow-none border-t border-outline-variant/30 dark:border-outline-variant/30">
+<!-- Nav Item 1: Home -->
+<button class="flex flex-col items-center justify-center text-secondary dark:text-secondary hover:text-on-surface dark:hover:text-on-surface transition-colors hover:bg-surface-container-highest/30 dark:hover:bg-surface-container-highest/30 rounded-xl py-1 px-3 active:scale-90 transition-transform duration-150" type="button">
+<span class="material-symbols-outlined" data-icon="home">home</span>
+<span class="text-label-sm font-label-sm">Home</span>
+</button>
+<!-- Nav Item 2: Search -->
+<button class="flex flex-col items-center justify-center text-secondary dark:text-secondary hover:text-on-surface dark:hover:text-on-surface transition-colors hover:bg-surface-container-highest/30 dark:hover:bg-surface-container-highest/30 rounded-xl py-1 px-3 active:scale-90 transition-transform duration-150" type="button">
+<span class="material-symbols-outlined" data-icon="search">search</span>
+<span class="text-label-sm font-label-sm">Search</span>
+</button>
+<!-- Nav Item 3: Tickets (ACTIVE) -->
+<button class="flex flex-col items-center justify-center text-primary-container dark:text-primary-container font-semibold transition-all hover:bg-surface-container-highest/30 dark:hover:bg-surface-container-highest/30 rounded-xl py-1 px-3 active:scale-90 transition-transform duration-150" type="button">
+<span class="material-symbols-outlined text-primary-container" data-icon="confirmation_number" style="font-variation-settings: 'FILL' 1;">confirmation_number</span>
+<span class="text-label-sm font-label-sm text-primary-container">Tickets</span>
+</button>
+<!-- Nav Item 4: Alerts -->
+<button class="flex flex-col items-center justify-center text-secondary dark:text-secondary hover:text-on-surface dark:hover:text-on-surface transition-colors hover:bg-surface-container-highest/30 dark:hover:bg-surface-container-highest/30 rounded-xl py-1 px-3 active:scale-90 transition-transform duration-150" type="button">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+<span class="text-label-sm font-label-sm">Alerts</span>
+</button>
+<!-- Nav Item 5: Profile -->
+<button class="flex flex-col items-center justify-center text-secondary dark:text-secondary hover:text-on-surface dark:hover:text-on-surface transition-colors hover:bg-surface-container-highest/30 dark:hover:bg-surface-container-highest/30 rounded-xl py-1 px-3 active:scale-90 transition-transform duration-150" type="button">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="text-label-sm font-label-sm">Profile</span>
+</button>
+</nav>
+</div>
+</body></html>

@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>EventHub - Neon Horizon Festival 2025</title>
+<!-- Google Fonts: Geist & Inter -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS Play CDN -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "inverse-primary": "#9d4300",
+            "on-tertiary-container": "#4c0084",
+            "primary-container": "#f97316",
+            "surface-bright": "#303950",
+            "on-primary-container": "#582200",
+            "primary": "#ffb690",
+            "surface-tint": "#ffb690",
+            "outline-variant": "#584237",
+            "error": "#ffb4ab",
+            "secondary-fixed": "#cce6fa",
+            "secondary-container": "#334c5c",
+            "on-surface": "#dae2ff",
+            "surface": "#0a1328",
+            "surface-dim": "#0a1328",
+            "primary-fixed-dim": "#ffb690",
+            "surface-container-highest": "#2c344b",
+            "secondary-fixed-dim": "#b0cadd",
+            "surface-container-high": "#21293f",
+            "on-secondary-fixed-variant": "#314a59",
+            "surface-container": "#161f35",
+            "surface-container-low": "#121b30",
+            "on-primary-fixed": "#341100",
+            "on-secondary": "#1a3342",
+            "on-secondary-fixed": "#021e2c",
+            "primary-fixed": "#ffdbca",
+            "on-primary": "#552100",
+            "background": "#0a1328",
+            "outline": "#a78b7d",
+            "on-secondary-container": "#a2bcce",
+            "on-primary-fixed-variant": "#783200",
+            "on-error": "#690005",
+            "surface-container-lowest": "#050d22",
+            "on-error-container": "#ffdad6",
+            "tertiary-fixed": "#f0dbff",
+            "inverse-surface": "#dae2ff",
+            "on-tertiary-fixed": "#2c0051",
+            "on-tertiary": "#490080",
+            "tertiary-fixed-dim": "#ddb7ff",
+            "tertiary": "#ddb7ff",
+            "inverse-on-surface": "#273046",
+            "secondary": "#b0cadd",
+            "on-background": "#dae2ff",
+            "error-container": "#93000a",
+            "surface-variant": "#2c344b",
+            "on-surface-variant": "#e0c0b1",
+            "tertiary-container": "#be7bff",
+            "on-tertiary-fixed-variant": "#6900b3"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "space-3xl": "2.5rem",
+            "gutter-grid": "0.75rem",
+            "space-md": "1rem",
+            "margin-screen": "1rem",
+            "space-xl": "1.5rem",
+            "space-sm": "0.75rem",
+            "space-xs": "0.5rem",
+            "nav-bottom-height": "4rem",
+            "space-lg": "1.25rem",
+            "touch-target-min": "2.75rem",
+            "space-2xl": "2rem",
+            "space-2xs": "0.25rem"
+          },
+          "fontFamily": {
+            "body-md": ["Inter"],
+            "label-sm": ["Inter"],
+            "headline-md": ["Geist"],
+            "body-md-medium": ["Inter"],
+            "headline-xl": ["Geist"],
+            "headline-lg": ["Geist"],
+            "body-lg-medium": ["Inter"],
+            "label-md": ["Inter"],
+            "headline-xl-mobile": ["Geist"],
+            "code-ticket": ["Geist"],
+            "headline-sm": ["Geist"],
+            "body-lg": ["Inter"]
+          },
+          "fontSize": {
+            "body-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0em", "fontWeight": "400" }],
+            "label-sm": ["11px", { "lineHeight": "14px", "letterSpacing": "0.04em", "fontWeight": "600" }],
+            "headline-md": ["20px", { "lineHeight": "26px", "letterSpacing": "-0.005em", "fontWeight": "600" }],
+            "body-md-medium": ["14px", { "lineHeight": "20px", "letterSpacing": "0.005em", "fontWeight": "500" }],
+            "headline-xl": ["36px", { "lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+            "headline-lg": ["24px", { "lineHeight": "30px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+            "body-lg-medium": ["16px", { "lineHeight": "24px", "letterSpacing": "0em", "fontWeight": "500" }],
+            "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "600" }],
+            "headline-xl-mobile": ["28px", { "lineHeight": "34px", "letterSpacing": "-0.015em", "fontWeight": "700" }],
+            "code-ticket": ["15px", { "lineHeight": "20px", "letterSpacing": "0.08em", "fontWeight": "600" }],
+            "headline-sm": ["18px", { "lineHeight": "24px", "letterSpacing": "0em", "fontWeight": "600" }],
+            "body-lg": ["16px", { "lineHeight": "24px", "letterSpacing": "0em", "fontWeight": "400" }]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-family: 'Material Symbols Outlined';
+      font-weight: normal;
+      font-style: normal;
+      display: inline-block;
+      line-height: 1;
+      text-transform: none;
+      letter-spacing: normal;
+      word-wrap: normal;
+      white-space: nowrap;
+      direction: ltr;
+    }
+    /* Ambient glow utilities per design system */
+    .glow-orange {
+      box-shadow: 0 8px 24px rgba(249, 115, 22, 0.35);
+    }
+    .glow-purple {
+      box-shadow: 0 8px 24px rgba(168, 85, 247, 0.35);
+    }
+    .ticket-dashed-cut {
+      background-image: repeating-linear-gradient(to right, #334c5c 0, #334c5c 8px, transparent 8px, transparent 16px);
+      height: 1px;
+    }
+    /* Hide scrollbar for tab strips */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface-container-lowest text-on-surface antialiased min-h-screen flex justify-center selection:bg-primary-container selection:text-surface-container-lowest">
+<!-- Mobile Canvas Container (375px-430px centered) -->
+<div class="w-full max-w-lg bg-surface min-h-screen flex flex-col relative pb-36 overflow-x-hidden">
+<!-- Top Floating Header Action Bar -->
+<header class="fixed top-0 left-0 right-0 z-40 max-w-lg mx-auto w-full px-space-md h-16 flex items-center justify-between pointer-events-none">
+<button aria-label="Back" class="pointer-events-auto h-11 w-11 rounded-full bg-surface-container-lowest/80 backdrop-blur-md flex items-center justify-center text-on-surface hover:bg-surface-container transition-all active:scale-90 border border-secondary-container/40" type="button">
+<span class="material-symbols-outlined text-[22px]">arrow_back</span>
+</button>
+<div class="flex items-center gap-space-xs pointer-events-auto">
+<button aria-label="Share Event" class="h-11 w-11 rounded-full bg-surface-container-lowest/80 backdrop-blur-md flex items-center justify-center text-on-surface hover:bg-surface-container transition-all active:scale-90 border border-secondary-container/40" type="button">
+<span class="material-symbols-outlined text-[20px]">share</span>
+</button>
+<button aria-label="Favorite" class="h-11 w-11 rounded-full bg-surface-container-lowest/80 backdrop-blur-md flex items-center justify-center text-primary-container hover:bg-surface-container transition-all active:scale-90 border border-secondary-container/40" id="fav-btn" onclick="toggleFav(this)" type="button">
+<span class="material-symbols-outlined text-[22px]" data-icon="favorite" data-weight="fill" style="font-variation-settings: 'FILL' 1;">favorite</span>
+</button>
+</div>
+</header>
+<!-- Edge-to-Edge Hero Banner with Stage Lasers -->
+<div class="relative w-full h-80 overflow-hidden shrink-0">
+<img class="w-full h-full object-cover" data-alt="An electric nocturnal stadium music festival with high-intensity neon laser beams slicing through atmospheric purple mist and haze. Crowds of music fans celebrate beneath massive holographic LED stages lit in radiant warm orange and cosmic navy accents. The photography exudes energetic festival vibrancy, high-contrast dark-mode concert aesthetics, and sharp illumination against deep midnight blue shadows." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBSSe6X_argxuY3hKv-owQi2Jxm3ySyf8s31H6fzOa-W6LtPSgBWtBQucg84ZIXzFKvVV9kEcUK1uXycPgS6AFurx3q1y4Ba4w8KIRZJjH1wG2e-6wb6hYvRJO9BWFH76DxGPactn4nSjiJJIh20stPxzbrM38QV4aUuunVGHIm4DOSf-JSQr8_t578AmQBF0Ob08Fks9c7nEI1ngTE8pl2TpFwmGLJ0w2hMrhKoal4W5emNNJsFHM1"/>
+<!-- Gradient masks for seamless text readability and card overlap -->
+<div class="absolute inset-0 bg-gradient-to-t from-surface via-surface/40 to-transparent"></div>
+<div class="absolute inset-0 bg-gradient-to-b from-surface-container-lowest/60 via-transparent to-transparent h-24"></div>
+<!-- Quick Live Signal Pills -->
+<div class="absolute bottom-6 left-space-md right-space-md flex items-center justify-between">
+<div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary-container/20 backdrop-blur-md border border-primary-container/40">
+<span class="h-2 w-2 rounded-full bg-primary-container animate-pulse"></span>
+<span class="font-label-sm text-label-sm text-primary uppercase tracking-wider font-bold">Hot Selling • 94% Booked</span>
+</div>
+<div class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-surface-container-high/80 backdrop-blur-md border border-secondary-container/50">
+<span class="material-symbols-outlined text-secondary text-[14px]">local_activity</span>
+<span class="font-label-sm text-label-sm text-secondary font-medium">Verified Pass</span>
+</div>
+</div>
+</div>
+<!-- Main Content Stream Overlapping Hero -->
+<main class="relative px-space-md flex flex-col gap-space-lg -mt-3 z-10">
+<!-- Event Title & Quick Meta Card -->
+<div class="bg-surface-container-low/90 backdrop-blur-xl rounded-2xl p-space-md border border-secondary-container/40 shadow-xl">
+<div class="flex flex-wrap items-center gap-2 mb-2">
+<span class="px-2.5 py-0.5 rounded-full bg-tertiary-container/20 text-tertiary font-label-sm text-label-sm border border-tertiary-container/30">Electronic &amp; Synthwave</span>
+<span class="px-2.5 py-0.5 rounded-full bg-surface-container-highest text-secondary font-label-sm text-label-sm">Age 18+</span>
+</div>
+<h1 class="font-headline-xl-mobile text-headline-xl-mobile text-on-surface font-bold tracking-tight mb-space-sm leading-tight">
+          NEON HORIZON FESTIVAL 2025
+        </h1>
+<div class="flex flex-col gap-space-xs pt-1 border-t border-secondary-container/30 mt-space-xs">
+<!-- Date & Time Row -->
+<div class="flex items-center gap-space-sm text-secondary py-1">
+<div class="h-9 w-9 rounded-xl bg-surface-container flex items-center justify-center text-primary-container shrink-0 border border-secondary-container/40">
+<span class="material-symbols-outlined text-[20px]">calendar_month</span>
+</div>
+<div class="flex flex-col">
+<span class="font-body-md-medium text-body-md-medium text-on-surface">Sat, Dec 28, 2024</span>
+<span class="font-label-sm text-label-sm text-secondary">18:00 - 02:00 (Next Day)</span>
+</div>
+</div>
+<!-- Location Row with Map Pin Pill -->
+<div class="flex items-center justify-between gap-space-sm text-secondary py-1">
+<div class="flex items-center gap-space-sm min-w-0">
+<div class="h-9 w-9 rounded-xl bg-surface-container flex items-center justify-center text-primary-container shrink-0 border border-secondary-container/40">
+<span class="material-symbols-outlined text-[20px]">pin_drop</span>
+</div>
+<div class="flex flex-col truncate">
+<span class="font-body-md-medium text-body-md-medium text-on-surface truncate">SECC Exhibition Hall A</span>
+<span class="font-label-sm text-label-sm text-secondary truncate">799 Nguyen Van Linh, District 7, HCMC</span>
+</div>
+</div>
+<a class="shrink-0 px-3 py-1.5 rounded-lg bg-secondary-container/30 hover:bg-secondary-container/60 border border-secondary-container text-secondary text-label-sm font-label-sm flex items-center gap-1 transition-all" href="#venue-section">
+<span>Map</span>
+<span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+</a>
+</div>
+</div>
+</div>
+<!-- Interactive Mini Seat Map Preview Zone -->
+<section class="bg-surface-container-low rounded-2xl p-space-md border border-secondary-container/40">
+<div class="flex items-center justify-between mb-3">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary-container text-[20px]">stadium</span>
+<h2 class="font-headline-sm text-headline-sm text-on-surface font-semibold">Arena Zone View</h2>
+</div>
+<span class="font-label-sm text-label-sm text-primary uppercase font-bold tracking-wider">Standing &amp; VIP Decks</span>
+</div>
+<!-- Venue Stage Wireframe Illustration -->
+<div class="relative bg-surface-container-lowest rounded-xl p-4 border border-secondary-container/30 flex flex-col items-center justify-center overflow-hidden">
+<!-- Stage Top bar -->
+<div class="w-48 py-1 mb-4 rounded-b-lg bg-gradient-to-r from-primary-container via-primary to-primary-container text-surface-container-lowest text-center font-label-sm text-label-sm font-bold tracking-widest uppercase shadow-sm">
+            STAGE &amp; DJ BOOTH
+          </div>
+<!-- Zone Badges / Interactive buttons -->
+<div class="w-full grid grid-cols-2 gap-2 mb-3">
+<!-- Zone A (VIP) Button -->
+<button class="flex flex-col items-center py-2.5 px-2 rounded-xl bg-primary-container/15 border-2 border-primary-container text-on-surface transition-all" id="zone-btn-a" onclick="selectZone('Zone A')" type="button">
+<span class="font-label-sm text-label-sm text-primary font-bold">ZONE A (VIP FRONT)</span>
+<span class="font-label-sm text-label-sm text-secondary mt-0.5">High Energy • Fast Track</span>
+</button>
+<!-- Zone B (General) Button -->
+<button class="flex flex-col items-center py-2.5 px-2 rounded-xl bg-surface-container border border-secondary-container/40 text-secondary hover:text-on-surface transition-all" id="zone-btn-b" onclick="selectZone('Zone B')" type="button">
+<span class="font-label-sm text-label-sm text-on-surface font-semibold">ZONE B (MAIN FLOOR)</span>
+<span class="font-label-sm text-label-sm text-secondary mt-0.5">General Standing</span>
+</button>
+</div>
+<div class="flex items-center gap-4 text-secondary text-label-sm font-label-sm">
+<span class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-primary-container"></span> Selected Zone</span>
+<span class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-surface-bright"></span> Available Area</span>
+</div>
+</div>
+</section>
+<!-- Ticket Tier Selector Segment -->
+<section class="flex flex-col gap-space-sm">
+<div class="flex items-center justify-between">
+<h2 class="font-headline-sm text-headline-sm text-on-surface font-semibold flex items-center gap-2">
+<span class="material-symbols-outlined text-primary-container text-[20px]">confirmation_number</span>
+            Select Pass Category
+          </h2>
+<span class="font-label-sm text-label-sm text-secondary">Max 4 passes/user</span>
+</div>
+<!-- Tier 1: VIP Early Access -->
+<div class="relative bg-surface-container-low rounded-2xl p-space-md border-2 border-primary-container/80 transition-all" id="card-tier-vip">
+<div class="absolute -top-3 right-4 px-2.5 py-0.5 rounded-full bg-primary-container text-surface-container-lowest font-label-sm text-label-sm font-bold uppercase tracking-wider">
+            Most Popular
+          </div>
+<div class="flex items-start justify-between gap-2">
+<div>
+<div class="flex items-center gap-2">
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-semibold">VIP Early Access</h3>
+<span class="px-2 py-0.5 rounded-full bg-tertiary/15 text-tertiary text-label-sm font-label-sm">VIP Lane</span>
+</div>
+<p class="font-body-md text-body-md text-secondary mt-1">
+                Fast lane entrance, designated elevated lounge, 2 complimentary cocktail tokens.
+              </p>
+<div class="font-code-ticket text-code-ticket text-primary-container font-bold mt-2">
+                1,200,000 đ <span class="font-body-md text-body-md text-secondary font-normal">/ person</span>
+</div>
+</div>
+<!-- Touch Stepper -->
+<div class="flex items-center gap-2 bg-surface-container rounded-xl p-1 border border-secondary-container/40 shrink-0 mt-1">
+<button aria-label="Decrease VIP" class="h-8 w-8 rounded-lg bg-surface-container-high hover:bg-surface-bright text-on-surface flex items-center justify-center transition-all active:scale-90" onclick="updateQty('vip', -1)" type="button">
+<span class="material-symbols-outlined text-[18px]">remove</span>
+</button>
+<span class="font-headline-sm text-headline-sm text-on-surface w-6 text-center" id="qty-vip">1</span>
+<button aria-label="Increase VIP" class="h-8 w-8 rounded-lg bg-primary-container text-surface-container-lowest flex items-center justify-center transition-all active:scale-90 font-bold" onclick="updateQty('vip', 1)" type="button">
+<span class="material-symbols-outlined text-[18px]">add</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Tier 2: GA Regular -->
+<div class="bg-surface-container-low rounded-2xl p-space-md border border-secondary-container/40 transition-all hover:border-secondary-container" id="card-tier-ga">
+<div class="flex items-start justify-between gap-2">
+<div>
+<div class="flex items-center gap-2">
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-semibold">GA Regular Standing</h3>
+</div>
+<p class="font-body-md text-body-md text-secondary mt-1">
+                Full access to general festival floor and merchandise stalls.
+              </p>
+<div class="font-code-ticket text-code-ticket text-on-surface font-bold mt-2">
+                450,000 đ <span class="font-body-md text-body-md text-secondary font-normal">/ person</span>
+</div>
+</div>
+<!-- Touch Stepper -->
+<div class="flex items-center gap-2 bg-surface-container rounded-xl p-1 border border-secondary-container/40 shrink-0 mt-1">
+<button aria-label="Decrease GA" class="h-8 w-8 rounded-lg bg-surface-container-high hover:bg-surface-bright text-on-surface flex items-center justify-center transition-all active:scale-90" onclick="updateQty('ga', -1)" type="button">
+<span class="material-symbols-outlined text-[18px]">remove</span>
+</button>
+<span class="font-headline-sm text-headline-sm text-on-surface w-6 text-center" id="qty-ga">0</span>
+<button aria-label="Increase GA" class="h-8 w-8 rounded-lg bg-surface-container-high hover:bg-surface-bright text-on-surface flex items-center justify-center transition-all active:scale-90" onclick="updateQty('ga', 1)" type="button">
+<span class="material-symbols-outlined text-[18px]">add</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Tier 3: Student Pass -->
+<div class="bg-surface-container-low rounded-2xl p-space-md border border-secondary-container/40 transition-all hover:border-secondary-container" id="card-tier-student">
+<div class="flex items-start justify-between gap-2">
+<div>
+<div class="flex items-center gap-2">
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-semibold">Student Festival Pass</h3>
+<span class="px-2 py-0.5 rounded-full bg-secondary-container/50 text-secondary text-label-sm font-label-sm">Valid ID Req</span>
+</div>
+<p class="font-body-md text-body-md text-secondary mt-1">
+                Special concession pass for verified university &amp; high school students.
+              </p>
+<div class="font-code-ticket text-code-ticket text-on-surface font-bold mt-2">
+                250,000 đ <span class="font-body-md text-body-md text-secondary font-normal">/ person</span>
+</div>
+</div>
+<!-- Touch Stepper -->
+<div class="flex items-center gap-2 bg-surface-container rounded-xl p-1 border border-secondary-container/40 shrink-0 mt-1">
+<button aria-label="Decrease Student" class="h-8 w-8 rounded-lg bg-surface-container-high hover:bg-surface-bright text-on-surface flex items-center justify-center transition-all active:scale-90" onclick="updateQty('student', -1)" type="button">
+<span class="material-symbols-outlined text-[18px]">remove</span>
+</button>
+<span class="font-headline-sm text-headline-sm text-on-surface w-6 text-center" id="qty-student">0</span>
+<button aria-label="Increase Student" class="h-8 w-8 rounded-lg bg-surface-container-high hover:bg-surface-bright text-on-surface flex items-center justify-center transition-all active:scale-90" onclick="updateQty('student', 1)" type="button">
+<span class="material-symbols-outlined text-[18px]">add</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Organizer & Event Info Tabs -->
+<section class="bg-surface-container-low rounded-2xl p-space-md border border-secondary-container/40">
+<!-- Navigation Pill Tabs -->
+<div class="flex items-center gap-2 overflow-x-auto no-scrollbar pb-3 border-b border-secondary-container/30">
+<button class="px-3.5 py-1.5 rounded-xl bg-primary-container text-surface-container-lowest font-label-md text-label-md font-bold whitespace-nowrap transition-all" id="tab-btn-about" onclick="switchTab('about')" type="button">
+            About
+          </button>
+<button class="px-3.5 py-1.5 rounded-xl bg-surface-container text-secondary hover:text-on-surface font-label-md text-label-md whitespace-nowrap transition-all" id="tab-btn-lineup" onclick="switchTab('lineup')" type="button">
+            Lineup (12 Artists)
+          </button>
+<button class="px-3.5 py-1.5 rounded-xl bg-surface-container text-secondary hover:text-on-surface font-label-md text-label-md whitespace-nowrap transition-all" id="tab-btn-venue" onclick="switchTab('venue')" type="button">
+            Venue Map
+          </button>
+<button class="px-3.5 py-1.5 rounded-xl bg-surface-container text-secondary hover:text-on-surface font-label-md text-label-md whitespace-nowrap transition-all" id="tab-btn-policies" onclick="switchTab('policies')" type="button">
+            Policies
+          </button>
+</div>
+<!-- Tab Content: About -->
+<div class="pt-space-sm flex flex-col gap-space-sm" id="tab-content-about">
+<p class="font-body-md text-body-md text-secondary leading-relaxed">
+            Welcome to Vietnam's grandest year-end audio-visual electronic showcase. Neon Horizon 2025 brings international synth masterminds, mind-bending 3D stage lasers, and thunderous 80,000-watt sub-bass arrays inside SECC Saigon.
+          </p>
+<!-- Organizer Dossier Strip -->
+<div class="flex items-center justify-between p-3 rounded-xl bg-surface-container border border-secondary-container/30 mt-1">
+<div class="flex items-center gap-3">
+<div class="h-10 w-10 rounded-full bg-gradient-to-tr from-primary-container to-tertiary-container flex items-center justify-center font-bold text-surface-container-lowest font-headline-sm">
+                NH
+              </div>
+<div class="flex flex-col">
+<span class="font-body-md-medium text-body-md-medium text-on-surface">NeonHorizon Live Co.</span>
+<span class="font-label-sm text-label-sm text-secondary">Official Organizer • 4.9 ★ (18 events)</span>
+</div>
+</div>
+<button class="px-3 py-1 rounded-lg bg-surface-bright text-on-surface text-label-sm font-label-sm hover:bg-surface-container-highest transition-all" type="button">
+              Follow
+            </button>
+</div>
+</div>
+<!-- Tab Content: Lineup (Initially Hidden) -->
+<div class="hidden pt-space-sm flex-col gap-2" id="tab-content-lineup">
+<div class="flex items-center justify-between p-2.5 rounded-xl bg-surface-container">
+<div class="flex items-center gap-3">
+<span class="h-2 w-2 rounded-full bg-primary-container"></span>
+<span class="font-body-md-medium text-body-md-medium text-on-surface">KAVINSKY (Headliner Live DJ Set)</span>
+</div>
+<span class="font-label-sm text-label-sm text-primary font-bold">23:30</span>
+</div>
+<div class="flex items-center justify-between p-2.5 rounded-xl bg-surface-container">
+<div class="flex items-center gap-3">
+<span class="h-2 w-2 rounded-full bg-tertiary"></span>
+<span class="font-body-md-medium text-body-md-medium text-on-surface">GUNSHIP (Retro Live Ensemble)</span>
+</div>
+<span class="font-label-sm text-label-sm text-secondary">21:45</span>
+</div>
+<div class="flex items-center justify-between p-2.5 rounded-xl bg-surface-container">
+<div class="flex items-center gap-3">
+<span class="h-2 w-2 rounded-full bg-secondary"></span>
+<span class="font-body-md-medium text-body-md-medium text-on-surface">THE MIDNIGHT (Special Guest)</span>
+</div>
+<span class="font-label-sm text-label-sm text-secondary">20:00</span>
+</div>
+</div>
+<!-- Tab Content: Venue Map (Initially Hidden) -->
+<div class="hidden pt-space-sm flex-col gap-2" id="tab-content-venue">
+<div class="p-3 rounded-xl bg-surface-container text-body-md text-secondary">
+            SECC Hall A features three main access corridors: Gate 1 for VIP fast-track credentials, Gate 2 &amp; 3 for GA attendees. Locker facilities available at Level 1 atrium.
+          </div>
+</div>
+<!-- Tab Content: Policies (Initially Hidden) -->
+<div class="hidden pt-space-sm flex-col gap-2" id="tab-content-policies">
+<div class="p-3 rounded-xl bg-surface-container text-body-md text-secondary">
+            Strictly no refunds within 72 hours of show start. Physical pass wristbands exchanged at gates with digital QR ticket.
+          </div>
+</div>
+</section>
+<!-- Event Safeguard Badges (Bento Style) -->
+<section class="grid grid-cols-2 gap-space-sm mb-4">
+<div class="p-3.5 rounded-2xl bg-surface-container-low border border-secondary-container/30 flex items-center gap-3">
+<div class="h-9 w-9 rounded-xl bg-surface-container flex items-center justify-center text-primary shrink-0">
+<span class="material-symbols-outlined text-[20px]">verified_user</span>
+</div>
+<div class="flex flex-col">
+<span class="font-body-md-medium text-body-md-medium text-on-surface font-semibold">100% Guaranteed</span>
+<span class="font-label-sm text-label-sm text-secondary">Anti-fraud QR Tokens</span>
+</div>
+</div>
+<div class="p-3.5 rounded-2xl bg-surface-container-low border border-secondary-container/30 flex items-center gap-3">
+<div class="h-9 w-9 rounded-xl bg-surface-container flex items-center justify-center text-tertiary shrink-0">
+<span class="material-symbols-outlined text-[20px]">bolt</span>
+</div>
+<div class="flex flex-col">
+<span class="font-body-md-medium text-body-md-medium text-on-surface font-semibold">Instant Ticket</span>
+<span class="font-label-sm text-label-sm text-secondary">Apple Wallet Ready</span>
+</div>
+</div>
+</section>
+</main>
+<!-- Sticky Bottom Checkout Action Bar (Elevated Tier 2/3) -->
+<div class="fixed bottom-16 left-0 right-0 z-40 max-w-lg mx-auto w-full px-space-md py-3 bg-surface-container-lowest/95 backdrop-blur-xl border-t border-secondary-container/40 flex items-center justify-between gap-4">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-secondary uppercase font-semibold">Total Price</span>
+<div class="flex items-baseline gap-1">
+<span class="font-headline-lg text-headline-lg text-primary font-bold tracking-tight" id="display-total">1,200,000 đ</span>
+</div>
+<span class="font-label-sm text-label-sm text-secondary" id="ticket-count-summary">1 VIP Pass selected</span>
+</div>
+<!-- Vibrant Orange Primary Brand CTA Button with Ambient Glow -->
+<button class="flex-1 max-w-[210px] h-12 bg-primary-container hover:bg-inverse-primary text-white font-body-md-medium text-body-md-medium rounded-xl flex items-center justify-center gap-2 glow-orange transition-all active:scale-95" onclick="checkoutAction()" type="button">
+<span class="font-bold">Buy Ticket Now</span>
+<span class="material-symbols-outlined text-[20px]">arrow_forward</span>
+</button>
+</div>
+<!-- Customer Bottom Navigation Bar (Docked full-width bottom-0, Active: Tickets) -->
+<nav class="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around h-nav-bottom-height max-w-lg mx-auto w-full px-space-xs bg-surface-container-lowest/90 backdrop-blur-md border-t border-outline-variant/30">
+<!-- Home -->
+<a class="flex flex-col items-center justify-center text-secondary hover:text-on-surface transition-colors hover:bg-surface-container-highest/30 rounded-xl active:scale-90 transition-transform duration-150 w-16 h-12" href="#">
+<span class="material-symbols-outlined text-[24px]" data-icon="home">home</span>
+<span class="text-label-sm font-label-sm mt-0.5">Home</span>
+</a>
+<!-- Search -->
+<a class="flex flex-col items-center justify-center text-secondary hover:text-on-surface transition-colors hover:bg-surface-container-highest/30 rounded-xl active:scale-90 transition-transform duration-150 w-16 h-12" href="#">
+<span class="material-symbols-outlined text-[24px]" data-icon="search">search</span>
+<span class="text-label-sm font-label-sm mt-0.5">Search</span>
+</a>
+<!-- Tickets (ACTIVE ITEM: Contextual mapping from screen intent) -->
+<a class="flex flex-col items-center justify-center text-primary-container font-semibold transition-all hover:bg-surface-container-highest/30 rounded-xl active:scale-90 transition-transform duration-150 w-16 h-12 relative" href="#">
+<span class="material-symbols-outlined text-[24px]" data-icon="confirmation_number" data-weight="fill" style="font-variation-settings: 'FILL' 1;">confirmation_number</span>
+<span class="text-label-sm font-label-sm mt-0.5">Tickets</span>
+<!-- Active Tab Indicator Dot -->
+<span class="h-1 w-1 rounded-full bg-primary-container absolute bottom-1"></span>
+</a>
+<!-- Alerts -->
+<a class="flex flex-col items-center justify-center text-secondary hover:text-on-surface transition-colors hover:bg-surface-container-highest/30 rounded-xl active:scale-90 transition-transform duration-150 w-16 h-12" href="#">
+<span class="material-symbols-outlined text-[24px]" data-icon="notifications">notifications</span>
+<span class="text-label-sm font-label-sm mt-0.5">Alerts</span>
+</a>
+<!-- Profile -->
+<a class="flex flex-col items-center justify-center text-secondary hover:text-on-surface transition-colors hover:bg-surface-container-highest/30 rounded-xl active:scale-90 transition-transform duration-150 w-16 h-12" href="#">
+<span class="material-symbols-outlined text-[24px]" data-icon="person">person</span>
+<span class="text-label-sm font-label-sm mt-0.5">Profile</span>
+</a>
+</nav>
+</div>
+<!-- Lightweight Interactive Micro-interactions Script -->
+<script>
+    const ticketState = {
+      vip: 1,
+      ga: 0,
+      student: 0
+    };
+
+    const prices = {
+      vip: 1200000,
+      ga: 450000,
+      student: 250000
+    };
+
+    function updateQty(tier, delta) {
+      const current = ticketState[tier];
+      const next = Math.max(0, Math.min(4, current + delta));
+      ticketState[tier] = next;
+      document.getElementById(`qty-${tier}`).textContent = next;
+      
+      // Update border highlighting on active card
+      const card = document.getElementById(`card-tier-${tier}`);
+      if (next > 0) {
+        card.classList.add('border-primary-container/80');
+        card.classList.remove('border-secondary-container/40');
+      } else if (tier !== 'vip') {
+        card.classList.remove('border-primary-container/80');
+        card.classList.add('border-secondary-container/40');
+      }
+
+      calculateTotal();
+    }
+
+    function calculateTotal() {
+      const total = (ticketState.vip * prices.vip) + 
+                    (ticketState.ga * prices.ga) + 
+                    (ticketState.student * prices.student);
+      
+      const totalQty = ticketState.vip + ticketState.ga + ticketState.student;
+      
+      // Format total
+      document.getElementById('display-total').textContent = total.toLocaleString('vi-VN') + ' đ';
+      
+      // Update summary text
+      const summaryEl = document.getElementById('ticket-count-summary');
+      if (totalQty === 0) {
+        summaryEl.textContent = 'Please select ticket quantity';
+      } else {
+        summaryEl.textContent = `${totalQty} Ticket${totalQty > 1 ? 's' : ''} selected`;
+      }
+    }
+
+    function selectZone(zoneName) {
+      const btnA = document.getElementById('zone-btn-a');
+      const btnB = document.getElementById('zone-btn-b');
+      
+      if (zoneName === 'Zone A') {
+        btnA.className = 'flex flex-col items-center py-2.5 px-2 rounded-xl bg-primary-container/15 border-2 border-primary-container text-on-surface transition-all';
+        btnB.className = 'flex flex-col items-center py-2.5 px-2 rounded-xl bg-surface-container border border-secondary-container/40 text-secondary hover:text-on-surface transition-all';
+      } else {
+        btnB.className = 'flex flex-col items-center py-2.5 px-2 rounded-xl bg-primary-container/15 border-2 border-primary-container text-on-surface transition-all';
+        btnA.className = 'flex flex-col items-center py-2.5 px-2 rounded-xl bg-surface-container border border-secondary-container/40 text-secondary hover:text-on-surface transition-all';
+      }
+    }
+
+    function switchTab(tabName) {
+      const tabs = ['about', 'lineup', 'venue', 'policies'];
+      tabs.forEach(t => {
+        const btn = document.getElementById(`tab-btn-${t}`);
+        const content = document.getElementById(`tab-content-${t}`);
+        if (t === tabName) {
+          btn.className = 'px-3.5 py-1.5 rounded-xl bg-primary-container text-surface-container-lowest font-label-md text-label-md font-bold whitespace-nowrap transition-all';
+          content.classList.remove('hidden');
+          content.classList.add('flex');
+        } else {
+          btn.className = 'px-3.5 py-1.5 rounded-xl bg-surface-container text-secondary hover:text-on-surface font-label-md text-label-md whitespace-nowrap transition-all';
+          content.classList.add('hidden');
+          content.classList.remove('flex');
+        }
+      });
+    }
+
+    function toggleFav(button) {
+      const icon = button.querySelector('span');
+      const isFilled = icon.style.fontVariationSettings.includes("'FILL' 1");
+      if (isFilled) {
+        icon.style.fontVariationSettings = "'FILL' 0";
+        button.classList.remove('text-primary-container');
+        button.classList.add('text-secondary');
+      } else {
+        icon.style.fontVariationSettings = "'FILL' 1";
+        button.classList.add('text-primary-container');
+        button.classList.remove('text-secondary');
+      }
+    }
+
+    function checkoutAction() {
+      const totalQty = ticketState.vip + ticketState.ga + ticketState.student;
+      if (totalQty === 0) {
+        alert('Please pick at least 1 ticket to proceed.');
+        return;
+      }
+      alert('Forwarding to secure checkout for ' + totalQty + ' pass(es)...');
+    }
+  </script>
+</body></html>

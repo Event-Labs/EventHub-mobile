@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="vi"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Khôi Phục Mật Khẩu - EventHub</title>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "surface-container-high": "#21293f",
+            "tertiary-fixed-dim": "#ddb7ff",
+            "on-primary-fixed-variant": "#783200",
+            "secondary": "#b0cadd",
+            "on-tertiary": "#490080",
+            "error": "#ffb4ab",
+            "on-tertiary-fixed-variant": "#6900b3",
+            "on-primary-fixed": "#341100",
+            "surface-tint": "#ffb690",
+            "surface": "#0a1328",
+            "primary-fixed": "#ffdbca",
+            "surface-variant": "#2c344b",
+            "on-secondary-fixed": "#021e2c",
+            "outline": "#a78b7d",
+            "surface-container": "#161f35",
+            "surface-dim": "#0a1328",
+            "secondary-container": "#334c5c",
+            "inverse-on-surface": "#273046",
+            "on-surface": "#dae2ff",
+            "on-error-container": "#ffdad6",
+            "tertiary-container": "#be7bff",
+            "surface-container-highest": "#2c344b",
+            "on-tertiary-fixed": "#2c0051",
+            "on-secondary-container": "#a2bcce",
+            "outline-variant": "#584237",
+            "tertiary": "#ddb7ff",
+            "error-container": "#93000a",
+            "inverse-surface": "#dae2ff",
+            "on-surface-variant": "#e0c0b1",
+            "background": "#0a1328",
+            "surface-bright": "#303950",
+            "tertiary-fixed": "#f0dbff",
+            "on-secondary-fixed-variant": "#314a59",
+            "on-secondary": "#1a3342",
+            "on-error": "#690005",
+            "primary": "#ffb690",
+            "secondary-fixed-dim": "#b0cadd",
+            "primary-fixed-dim": "#ffb690",
+            "secondary-fixed": "#cce6fa",
+            "on-primary": "#552100",
+            "surface-container-low": "#121b30",
+            "surface-container-lowest": "#050d22",
+            "primary-container": "#f97316",
+            "on-background": "#dae2ff",
+            "on-primary-container": "#582200",
+            "inverse-primary": "#9d4300",
+            "on-tertiary-container": "#4c0084"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "space-md": "1rem",
+            "space-lg": "1.25rem",
+            "space-2xl": "2rem",
+            "nav-bottom-height": "4rem",
+            "space-xl": "1.5rem",
+            "gutter-grid": "0.75rem",
+            "space-2xs": "0.25rem",
+            "touch-target-min": "2.75rem",
+            "space-sm": "0.75rem",
+            "margin-screen": "1rem",
+            "space-xs": "0.5rem",
+            "space-3xl": "2.5rem"
+          },
+          "fontFamily": {
+            "label-sm": ["Inter"],
+            "body-lg": ["Inter"],
+            "headline-xl": ["Geist"],
+            "body-lg-medium": ["Inter"],
+            "body-md": ["Inter"],
+            "label-md": ["Inter"],
+            "headline-md": ["Geist"],
+            "headline-xl-mobile": ["Geist"],
+            "code-ticket": ["Geist"],
+            "body-md-medium": ["Inter"],
+            "headline-sm": ["Geist"],
+            "headline-lg": ["Geist"]
+          },
+          "fontSize": {
+            "label-sm": ["11px", {"lineHeight": "14px", "letterSpacing": "0.04em", "fontWeight": "600"}],
+            "body-lg": ["16px", {"lineHeight": "24px", "letterSpacing": "0em", "fontWeight": "400"}],
+            "headline-xl": ["36px", {"lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+            "body-lg-medium": ["16px", {"lineHeight": "24px", "letterSpacing": "0em", "fontWeight": "500"}],
+            "body-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0em", "fontWeight": "400"}],
+            "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "600"}],
+            "headline-md": ["20px", {"lineHeight": "26px", "letterSpacing": "-0.005em", "fontWeight": "600"}],
+            "headline-xl-mobile": ["28px", {"lineHeight": "34px", "letterSpacing": "-0.015em", "fontWeight": "700"}],
+            "code-ticket": ["15px", {"lineHeight": "20px", "letterSpacing": "0.08em", "fontWeight": "600"}],
+            "body-md-medium": ["14px", {"lineHeight": "20px", "letterSpacing": "0.005em", "fontWeight": "500"}],
+            "headline-sm": ["18px", {"lineHeight": "24px", "letterSpacing": "0em", "fontWeight": "600"}],
+            "headline-lg": ["24px", {"lineHeight": "30px", "letterSpacing": "-0.01em", "fontWeight": "600"}]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-family: 'Material Symbols Outlined';
+      font-weight: normal;
+      font-style: normal;
+      display: inline-block;
+      line-height: 1;
+      text-transform: none;
+      letter-spacing: normal;
+      word-wrap: normal;
+      white-space: nowrap;
+      direction: ltr;
+    }
+    
+    /* Cosmic glow and backdrop tokens */
+    .bg-cosmic-base {
+      background-color: #081126;
+    }
+    .card-tier-1 {
+      background-color: #0c1446;
+      border: 1px solid rgba(179, 205, 224, 0.1);
+    }
+    .card-tier-2 {
+      background-color: rgba(12, 20, 70, 0.85);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(248, 250, 252, 0.12);
+    }
+    .input-field-custom {
+      background-color: #122155;
+      border: 1px solid rgba(179, 205, 224, 0.18);
+    }
+    .input-field-custom:focus-within {
+      border-color: #b0cadd;
+      box-shadow: 0 0 16px rgba(176, 202, 221, 0.2);
+    }
+    .cta-glow-orange {
+      box-shadow: 0 8px 24px rgba(249, 115, 22, 0.35);
+    }
+    .security-glow-cyan {
+      box-shadow: 0 0 40px rgba(56, 189, 248, 0.25), 0 0 16px rgba(176, 202, 221, 0.2);
+    }
+    .otp-glow-active {
+      box-shadow: 0 0 16px rgba(249, 115, 22, 0.45);
+      border-color: #f97316 !important;
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-cosmic-base text-on-surface font-body-md antialiased min-h-screen flex justify-center selection:bg-primary-container selection:text-white">
+<!-- Mobile Device Shell Canvas (Transactional Linear Journey: Global Nav Bars Suppressed) -->
+<div class="w-full max-w-lg min-h-screen bg-cosmic-base flex flex-col relative pb-space-3xl overflow-x-hidden">
+<!-- Ambient Atmospheric Glows -->
+<div class="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-96 bg-[#162968]/30 rounded-full blur-3xl pointer-events-none -z-10"></div>
+<div class="absolute top-80 right-0 w-64 h-64 bg-primary-container/10 rounded-full blur-3xl pointer-events-none -z-10"></div>
+<div class="absolute bottom-40 left-0 w-72 h-72 bg-tertiary-container/10 rounded-full blur-3xl pointer-events-none -z-10"></div>
+<!-- Top Navigation Bar: Task-Focused Linear Screen -->
+<header class="sticky top-0 z-40 bg-surface/90 backdrop-blur-md px-space-md h-14 flex items-center justify-between shadow-sm">
+<button aria-label="Quay lại" class="w-10 h-10 -ml-2 rounded-xl flex items-center justify-center text-on-surface hover:bg-surface-container-highest/50 active:scale-95 transition-transform duration-150" type="button">
+<span class="material-symbols-outlined text-secondary" data-icon="arrow_back_ios_new">arrow_back_ios_new</span>
+</button>
+<h1 class="font-headline-md text-headline-md font-bold tracking-tight text-on-surface">
+        Khôi Phục Mật Khẩu
+      </h1>
+<!-- Right Placeholder / Help Button for Balances -->
+<button aria-label="Trợ giúp" class="w-10 h-10 -mr-2 rounded-xl flex items-center justify-center text-secondary hover:bg-surface-container-highest/50 active:scale-95 transition-transform duration-150" type="button">
+<span class="material-symbols-outlined" data-icon="help_outline">help_outline</span>
+</button>
+</header>
+<!-- Main Content Container -->
+<main class="flex-1 px-space-md pt-space-md flex flex-col space-y-space-lg">
+<!-- Visual Illustration / Hero Security Badge -->
+<section class="flex flex-col items-center justify-center pt-space-xs pb-space-2xs text-center">
+<div class="relative flex items-center justify-center mb-space-sm">
+<!-- Multi-tier Halo -->
+<div class="w-20 h-20 rounded-full bg-[#122155] border border-secondary/30 flex items-center justify-center security-glow-cyan relative">
+<span class="material-symbols-outlined text-tertiary-fixed-dim text-3xl" data-icon="shield">shield</span>
+<div class="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-primary-container flex items-center justify-center border-2 border-cosmic-base shadow-md">
+<span class="material-symbols-outlined text-white text-base" data-icon="key">key</span>
+</div>
+</div>
+</div>
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-secondary px-3 py-1 rounded-full bg-surface-container-high border border-outline-variant/30">
+          Bảo Mật Tài Khoản 2 Lớp
+        </span>
+</section>
+<!-- Stepper Status Overview (Micro-indicators) -->
+<div class="grid grid-cols-3 gap-2 px-1">
+<div class="h-1 rounded-full bg-secondary"></div>
+<div class="h-1 rounded-full bg-primary-container shadow-[0_0_8px_rgba(249,115,22,0.6)]"></div>
+<div class="h-1 rounded-full bg-surface-container-high"></div>
+</div>
+<!-- CARD 1: Bước 1 - Gửi mã (Completed / Identity State) -->
+<section class="card-tier-1 rounded-2xl p-space-md relative overflow-hidden transition-all duration-200">
+<div class="flex items-start justify-between mb-space-xs">
+<div class="flex items-center space-x-2">
+<span class="w-6 h-6 rounded-full bg-surface-container-highest text-secondary flex items-center justify-center font-label-md text-label-md">
+              1
+            </span>
+<h2 class="font-headline-sm text-headline-sm font-semibold text-on-surface">
+              Gửi Mã Xác Nhận
+            </h2>
+</div>
+<span class="inline-flex items-center px-2 py-0.5 rounded-full font-label-sm text-label-sm bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+<span class="material-symbols-outlined text-xs mr-1" data-icon="check_circle">check_circle</span>
+            Đã Gửi
+          </span>
+</div>
+<p class="font-body-md text-body-md text-secondary mb-space-sm leading-relaxed">
+          Nhập email hoặc số điện thoại đã đăng ký để nhận mã xác thực OTP 6 số khôi phục tài khoản
+        </p>
+<!-- Registered Email Box with Verified Indicator -->
+<div class="input-field-custom rounded-xl h-12 px-space-md flex items-center justify-between">
+<div class="flex items-center space-x-3 overflow-hidden">
+<span class="material-symbols-outlined text-secondary text-xl flex-shrink-0" data-icon="mail">mail</span>
+<span class="font-body-md-medium text-body-md-medium text-on-surface truncate">
+              ho***@eventhub.vn
+            </span>
+</div>
+<button class="text-xs font-label-md text-primary hover:underline flex-shrink-0 ml-2" type="button">
+            Thay Đổi
+          </button>
+</div>
+</section>
+<!-- CARD 2: Bước 2 - Nhập OTP (Active High-Contrast Step) -->
+<section class="card-tier-2 rounded-2xl p-space-md relative shadow-lg">
+<div class="flex items-center space-x-2 mb-space-xs">
+<span class="w-6 h-6 rounded-full bg-primary-container text-white flex items-center justify-center font-label-md text-label-md font-bold">
+            2
+          </span>
+<h2 class="font-headline-sm text-headline-sm font-semibold text-on-surface">
+            Nhập Mã OTP
+          </h2>
+</div>
+<p class="font-body-md text-body-md text-secondary mb-space-md">
+          Mã xác thực 6 chữ số đã được gửi tới <span class="font-body-md-medium text-on-surface">ho***@eventhub.vn</span>
+</p>
+<!-- 6 OTP Square Boxes (digits '7', '2', '5', '0', '_', '_') -->
+<div class="grid grid-cols-6 gap-2 mb-space-md">
+<!-- Slot 1: '7' -->
+<div class="h-14 rounded-xl input-field-custom flex items-center justify-center border border-secondary/40">
+<span class="font-headline-md text-headline-md font-bold text-on-surface">7</span>
+</div>
+<!-- Slot 2: '2' -->
+<div class="h-14 rounded-xl input-field-custom flex items-center justify-center border border-secondary/40">
+<span class="font-headline-md text-headline-md font-bold text-on-surface">2</span>
+</div>
+<!-- Slot 3: '5' -->
+<div class="h-14 rounded-xl input-field-custom flex items-center justify-center border border-secondary/40">
+<span class="font-headline-md text-headline-md font-bold text-on-surface">5</span>
+</div>
+<!-- Slot 4: '0' -->
+<div class="h-14 rounded-xl input-field-custom flex items-center justify-center border border-secondary/40">
+<span class="font-headline-md text-headline-md font-bold text-on-surface">0</span>
+</div>
+<!-- Slot 5: Active cursor with glowing neon border -->
+<div class="h-14 rounded-xl input-field-custom flex items-center justify-center otp-glow-active bg-[#1a2d6b]">
+<span class="w-0.5 h-6 bg-primary-container animate-pulse"></span>
+</div>
+<!-- Slot 6: Empty Slot '_' -->
+<div class="h-14 rounded-xl input-field-custom flex items-center justify-center opacity-60">
+<span class="text-secondary font-headline-md font-bold">_</span>
+</div>
+</div>
+<!-- Countdown & Resend Option -->
+<div class="flex items-center justify-between pt-1">
+<div class="flex items-center space-x-1.5 text-secondary">
+<span class="material-symbols-outlined text-sm text-primary" data-icon="timer">timer</span>
+<span class="font-label-md text-label-md">Gửi lại mã sau <span class="text-primary font-bold">45s</span></span>
+</div>
+<button class="flex items-center space-x-1 text-secondary hover:text-on-surface transition-colors py-1 px-2 rounded-lg" type="button">
+<span class="material-symbols-outlined text-sm" data-icon="refresh">refresh</span>
+<span class="font-label-md text-label-md">Gửi lại mã</span>
+</button>
+</div>
+</section>
+<!-- CARD 3: Bước 3 - Mật khẩu mới preview (Ready for update) -->
+<section class="card-tier-1 rounded-2xl p-space-md relative opacity-95">
+<div class="flex items-center space-x-2 mb-space-md">
+<span class="w-6 h-6 rounded-full bg-surface-container-highest text-secondary flex items-center justify-center font-label-md text-label-md">
+            3
+          </span>
+<h2 class="font-headline-sm text-headline-sm font-semibold text-on-surface">
+            Thiết Lập Mật Khẩu Mới
+          </h2>
+</div>
+<div class="space-y-space-sm">
+<!-- Password Field 1 -->
+<div>
+<label class="block font-label-md text-label-md text-secondary mb-1.5" for="new-pass">
+              Mật khẩu mới
+            </label>
+<div class="input-field-custom rounded-xl h-12 px-space-md flex items-center justify-between">
+<div class="flex items-center space-x-3 w-full">
+<span class="material-symbols-outlined text-secondary text-lg flex-shrink-0" data-icon="lock">lock</span>
+<input class="bg-transparent border-none p-0 text-on-surface font-body-md focus:ring-0 w-full tracking-widest placeholder-secondary/50" id="new-pass" placeholder="Tối thiểu 8 ký tự" type="password" value="••••••••••••"/>
+</div>
+<button aria-label="Hiện mật khẩu" class="text-secondary hover:text-on-surface ml-2 flex-shrink-0" type="button">
+<span class="material-symbols-outlined text-lg" data-icon="visibility_off">visibility_off</span>
+</button>
+</div>
+</div>
+<!-- Password Field 2 -->
+<div>
+<label class="block font-label-md text-label-md text-secondary mb-1.5" for="confirm-pass">
+              Nhập lại mật khẩu mới
+            </label>
+<div class="input-field-custom rounded-xl h-12 px-space-md flex items-center justify-between">
+<div class="flex items-center space-x-3 w-full">
+<span class="material-symbols-outlined text-secondary text-lg flex-shrink-0" data-icon="lock_reset">lock_reset</span>
+<input class="bg-transparent border-none p-0 text-on-surface font-body-md focus:ring-0 w-full placeholder-secondary/50" id="confirm-pass" placeholder="Nhập lại mật khẩu vừa tạo" type="password"/>
+</div>
+<button aria-label="Hiện mật khẩu" class="text-secondary hover:text-on-surface ml-2 flex-shrink-0" type="button">
+<span class="material-symbols-outlined text-lg" data-icon="visibility">visibility</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Security requirements badge hint -->
+<div class="flex items-center space-x-2 mt-space-sm text-secondary font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-xs text-primary" data-icon="info">info</span>
+<span>Bao gồm chữ hoa, chữ thường và chữ số</span>
+</div>
+</section>
+<!-- Main Action Call To Action: Vibrant Orange #f97316 -->
+<div class="pt-space-xs flex flex-col space-y-space-md">
+<button class="w-full h-12 bg-primary-container text-white font-body-md-medium text-body-md-medium rounded-xl flex items-center justify-center space-x-2 cta-glow-orange active:scale-[0.98] transition-all duration-150" type="button">
+<span>Đặt Lại Mật Khẩu</span>
+<span class="material-symbols-outlined text-lg" data-icon="arrow_forward">arrow_forward</span>
+</button>
+<!-- Customer Care / Support Hotlink -->
+<div class="text-center py-space-xs">
+<p class="font-body-md text-body-md text-secondary">
+            Không nhận được mã? 
+            <a class="text-primary hover:underline font-body-md-medium inline-flex items-center ml-1" href="tel:19006868">
+              Liên hệ hỗ trợ 24/7 (1900 6868)
+            </a>
+</p>
+</div>
+</div>
+</main>
+<!-- Footer Secure Trust Signals -->
+<footer class="mt-auto pt-space-lg px-space-md text-center">
+<div class="inline-flex items-center space-x-2 text-secondary/70 font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-sm" data-icon="verified_user">verified_user</span>
+<span>Hệ thống bảo vệ giao dịch EventHub SSL 256-bit</span>
+</div>
+</footer>
+</div>
+</body></html>
