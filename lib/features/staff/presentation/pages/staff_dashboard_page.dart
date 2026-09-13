@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import '../../../../core/api/auth_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../auth/presentation/pages/login_page.dart';
+import '../../../home/presentation/pages/home_discovery_page.dart';
 import 'attendee_registry_page.dart';
 import 'qr_scanner_page.dart';
 
@@ -13,6 +15,25 @@ class StaffDashboardPage extends StatefulWidget {
 
 class _StaffDashboardPageState extends State<StaffDashboardPage> {
   int _currentNavIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final user = AuthService().currentUser;
+      if (user == null || !user.isStaff) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Bạn không có quyền truy cập cổng nhân viên!'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => user == null ? const LoginPage() : const HomeDiscoveryPage()),
+        );
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -69,10 +90,21 @@ class _StaffDashboardPageState extends State<StaffDashboardPage> {
               ],
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 4),
+          IconButton(
+            icon: const Icon(Icons.storefront_outlined, color: AppColors.primaryContainer, size: 20),
+            tooltip: 'Giao diện khách hàng',
+            onPressed: () {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (_) => const HomeDiscoveryPage()),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.logout, color: AppColors.error, size: 20),
+            tooltip: 'Đăng xuất',
             onPressed: () {
+              AuthService().logout();
               Navigator.of(context).pushAndRemoveUntil(
                 MaterialPageRoute(builder: (_) => const LoginPage()),
                 (route) => false,
@@ -133,6 +165,11 @@ class _StaffDashboardPageState extends State<StaffDashboardPage> {
   }
 
   Widget _buildStaffProfile(BuildContext context) {
+    final user = AuthService().currentUser;
+    final staffName = user?.fullName.isNotEmpty == true ? user!.fullName : 'Nhân viên EventHub';
+    final initials = staffName.trim().split(RegExp(r'\s+')).where((s) => s.isNotEmpty).map((s) => s[0].toUpperCase()).take(2).join();
+    final roleName = user?.roleDisplayName ?? 'Nhân viên';
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -154,8 +191,11 @@ class _StaffDashboardPageState extends State<StaffDashboardPage> {
                       shape: BoxShape.circle,
                       border: Border.all(color: AppColors.secondary.withOpacity(0.2), width: 2),
                     ),
-                    child: const Center(
-                      child: Text('LN', style: TextStyle(color: AppColors.secondary, fontWeight: FontWeight.bold)),
+                    child: Center(
+                      child: Text(
+                        initials.isNotEmpty ? initials : 'NV',
+                        style: const TextStyle(color: AppColors.secondary, fontWeight: FontWeight.bold),
+                      ),
                     ),
                   ),
                   Positioned(
@@ -174,19 +214,24 @@ class _StaffDashboardPageState extends State<StaffDashboardPage> {
                 ],
               ),
               const SizedBox(width: 12),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Lê Hoàng Nam', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                    SizedBox(height: 2),
+                    Text(
+                      staffName,
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
                     Row(
                       children: [
-                        Text('Gate Supervisor', style: TextStyle(color: AppColors.secondary, fontSize: 11)),
-                        SizedBox(width: 6),
-                        Text('•', style: TextStyle(color: Colors.white24)),
-                        SizedBox(width: 6),
-                        Text('Station #02', style: TextStyle(color: AppColors.primary, fontSize: 11, fontWeight: FontWeight.w500)),
+                        Text(roleName, style: const TextStyle(color: AppColors.secondary, fontSize: 11)),
+                        const SizedBox(width: 6),
+                        const Text('•', style: TextStyle(color: Colors.white24)),
+                        const SizedBox(width: 6),
+                        const Text('Station #02', style: TextStyle(color: AppColors.primary, fontSize: 11, fontWeight: FontWeight.w500)),
                       ],
                     ),
                   ],

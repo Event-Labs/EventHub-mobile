@@ -67,8 +67,78 @@ class AuthService {
     return {'success': false, 'message': response['message'] ?? 'Không thể gửi yêu cầu'};
   }
 
+  Future<Map<String, dynamic>> fetchProfile() async {
+    final response = await ApiClient().get('/users/me');
+    if (response['success'] == true && response['data'] != null) {
+      _currentUser = UserModel.fromJson(response['data']);
+      return {'success': true, 'user': _currentUser};
+    }
+    return {
+      'success': false,
+      'message': response['message'] ?? 'Không thể tải thông tin trang cá nhân'
+    };
+  }
+
+  Future<Map<String, dynamic>> updateProfile({
+    String? fullName,
+    String? phone,
+    String? address,
+    String? dob,
+    String? city,
+    String? avatarUrl,
+    String? bio,
+  }) async {
+    final Map<String, dynamic> body = {};
+    if (fullName != null) body['full_name'] = fullName;
+    if (phone != null) body['phone'] = phone;
+    if (address != null) body['address'] = address;
+    if (dob != null) body['dob'] = dob;
+    if (city != null) body['city'] = city;
+    if (avatarUrl != null) body['avatar_url'] = avatarUrl;
+    if (bio != null) body['bio'] = bio;
+
+    final response = await ApiClient().patch('/users/me', body);
+
+    if (response['success'] == true && response['data'] != null) {
+      _currentUser = UserModel.fromJson(response['data']);
+      return {
+        'success': true,
+        'user': _currentUser,
+        'message': response['message'] ?? 'Cập nhật hồ sơ thành công'
+      };
+    }
+
+    return {
+      'success': false,
+      'message': response['message'] ?? 'Cập nhật hồ sơ thất bại'
+    };
+  }
+
+  Future<Map<String, dynamic>> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final response = await ApiClient().patch('/users/me/password', {
+      'currentPassword': currentPassword,
+      'newPassword': newPassword,
+    });
+
+    if (response['success'] == true) {
+      return {
+        'success': true,
+        'message': response['message'] ?? 'Đổi mật khẩu thành công'
+      };
+    }
+
+    return {
+      'success': false,
+      'message': response['message'] ?? 'Đổi mật khẩu thất bại'
+    };
+  }
+
   void logout() {
     _currentUser = null;
     ApiClient().setAuthToken(null);
   }
 }
+

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:eventhub_mobile/core/api/auth_service.dart';
+import 'package:eventhub_mobile/core/models/user_model.dart';
 import 'package:eventhub_mobile/core/theme/app_colors.dart';
 import 'package:eventhub_mobile/features/auth/presentation/pages/forgot_password_page.dart';
 import 'package:eventhub_mobile/features/home/presentation/pages/home_discovery_page.dart';
@@ -51,11 +52,14 @@ class _LoginPageState extends State<LoginPage> {
 
       if (mounted) {
         if (res['success'] == true) {
-          final user = res['user'];
+          final user = res['user'] as UserModel?;
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Xin chào ${user?.fullName ?? ''}!'), backgroundColor: Colors.green),
+            SnackBar(
+              content: Text('Xin chào ${user?.fullName ?? ''}! (${user?.roleDisplayName ?? 'Khách hàng'})'),
+              backgroundColor: Colors.green,
+            ),
           );
-          if (user?.isStaff == true) {
+          if (user != null && user.isStaff) {
             Navigator.of(context).pushReplacement(
               MaterialPageRoute(builder: (_) => const StaffDashboardPage()),
             );
@@ -484,9 +488,20 @@ class _LoginPageState extends State<LoginPage> {
   Widget _buildStaffPortalLink() {
     return GestureDetector(
       onTap: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const StaffDashboardPage()),
-        );
+        final currentUser = AuthService().currentUser;
+        if (currentUser != null && currentUser.isStaff) {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const StaffDashboardPage()),
+          );
+        } else {
+          setState(() => _isLoginTab = true);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Vui lòng đăng nhập bằng tài khoản Ban Tổ Chức hoặc Nhân viên!'),
+              backgroundColor: AppColors.primaryContainer,
+            ),
+          );
+        }
       },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
