@@ -4,6 +4,7 @@ import 'package:eventhub_mobile/core/models/user_model.dart';
 import 'package:eventhub_mobile/core/theme/app_colors.dart';
 import 'package:eventhub_mobile/core/api/staff_service.dart';
 import 'package:eventhub_mobile/features/auth/presentation/pages/forgot_password_page.dart';
+import 'package:eventhub_mobile/features/auth/presentation/pages/verify_email_page.dart';
 import 'package:eventhub_mobile/features/home/presentation/pages/home_discovery_page.dart';
 import 'package:eventhub_mobile/features/staff/presentation/pages/staff_dashboard_page.dart';
 
@@ -16,12 +17,14 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
   bool _isLoginTab = true;
   bool _isLoading = false;
   bool _isGoogleLoading = false;
 
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   final _fullNameController = TextEditingController();
   final _phoneController = TextEditingController();
 
@@ -29,6 +32,7 @@ class _LoginPageState extends State<LoginPage> {
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     _fullNameController.dispose();
     _phoneController.dispose();
     super.dispose();
@@ -94,8 +98,26 @@ class _LoginPageState extends State<LoginPage> {
           }
         } else {
           setState(() => _isLoading = false);
+          final msg = res['message']?.toString() ?? 'Đăng nhập không thành công!';
+          final isUnverified = msg.toLowerCase().contains('chưa được xác thực') || msg.toLowerCase().contains('chưa kích hoạt');
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(res['message'] ?? 'Đăng nhập không thành công!'), backgroundColor: AppColors.error),
+            SnackBar(
+              content: Text(msg),
+              backgroundColor: AppColors.error,
+              action: isUnverified
+                  ? SnackBarAction(
+                      label: 'Xác thực',
+                      textColor: Colors.white,
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => VerifyEmailPage(email: email),
+                          ),
+                        );
+                      },
+                    )
+                  : null,
+            ),
           );
         }
       } else {
@@ -105,27 +127,71 @@ class _LoginPageState extends State<LoginPage> {
       // Register Flow
       final fullName = _fullNameController.text.trim();
       if (fullName.isEmpty) {
-        setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Vui lòng nhập Họ và tên!'), backgroundColor: AppColors.error),
         );
         return;
       }
 
+      if (email.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Vui lòng nhập địa chỉ Email!'), backgroundColor: AppColors.error),
+        );
+        return;
+      }
+
+      final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+      if (!emailRegex.hasMatch(email)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Địa chỉ Email không đúng định dạng!'), backgroundColor: AppColors.error),
+        );
+        return;
+      }
+
+      final phone = _phoneController.text.trim();
+      if (phone.isNotEmpty && !RegExp(r'^[0-9]{9,11}$').hasMatch(phone)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Số điện thoại không hợp lệ (cần 9-11 chữ số)!'), backgroundColor: AppColors.error),
+        );
+        return;
+      }
+
+      if (password.length < 8 ||
+          !password.contains(RegExp(r'[A-Z]')) ||
+          !password.contains(RegExp(r'[a-z]')) ||
+          !password.contains(RegExp(r'[0-9]')) ||
+          !password.contains(RegExp(r'[^a-zA-Z0-9]'))) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Mật khẩu phải từ 8 ký tự, gồm ít nhất 1 chữ hoa, 1 chữ thường, 1 số và 1 ký tự đặc biệt!'),
+            backgroundColor: AppColors.error,
+            duration: Duration(seconds: 4),
+          ),
+        );
+        return;
+      }
+
+      final confirmPassword = _confirmPasswordController.text;
+      if (password != confirmPassword) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Mật khẩu xác nhận không trùng khớp!'), backgroundColor: AppColors.error),
+        );
+        return;
+      }
+
+      setState(() => _isLoading = true);
+
       final res = await AuthService().register(
         fullName: fullName,
         email: email,
         password: password,
-        phone: _phoneController.text.trim(),
+        phone: phone.isNotEmpty ? phone : null,
       );
       setState(() => _isLoading = false);
 
       if (mounted) {
         if (res['success'] == true) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Đăng ký thành công! Hãy đăng nhập ngay.'), backgroundColor: Colors.green),
-          );
-          setState(() => _isLoginTab = true);
+          _showRegisterSuccessDialog(email);
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(res['message'] ?? 'Đăng ký thất bại!'), backgroundColor: AppColors.error),
@@ -133,6 +199,90 @@ class _LoginPageState extends State<LoginPage> {
         }
       }
     }
+  }
+
+  void _showRegisterSuccessDialog(String registeredEmail) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF0C1446),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: AppColors.primaryContainer.withOpacity(0.4)),
+        ),
+        contentPadding: const EdgeInsets.all(24),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: Colors.green.withOpacity(0.15),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.mark_email_read_outlined, color: Colors.green, size: 36),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Đăng Ký Thành Công!',
+              style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            RichText(
+              textAlign: TextAlign.center,
+              text: TextSpan(
+                style: const TextStyle(color: AppColors.secondary, fontSize: 13, height: 1.5),
+                children: [
+                  const TextSpan(text: 'Chúng tôi đã gửi email kích hoạt đến:\n'),
+                  TextSpan(
+                    text: registeredEmail,
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
+                  const TextSpan(
+                    text: '\n\nVui lòng kiểm tra hộp thư đến (hoặc hòm thư Spam) và nhấn vào liên kết xác nhận để kích hoạt tài khoản của bạn trước khi đăng nhập.',
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              height: 46,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryContainer,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => VerifyEmailPage(email: registeredEmail),
+                    ),
+                  );
+                },
+                child: const Text('Nhập Mã Xác Thực Ngay', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                setState(() {
+                  _isLoginTab = true;
+                  _passwordController.clear();
+                  _confirmPasswordController.clear();
+                });
+              },
+              child: const Text('Để sau, về trang Đăng nhập', style: TextStyle(color: AppColors.secondary, fontSize: 13)),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _handleGoogleSignIn() async {
@@ -400,6 +550,38 @@ class _LoginPageState extends State<LoginPage> {
             },
           ),
           const SizedBox(height: 16),
+
+          if (!_isLoginTab) ...[
+            _buildTextField(
+              controller: _confirmPasswordController,
+              label: 'Xác nhận mật khẩu',
+              hint: '••••••••••••',
+              icon: Icons.lock_reset,
+              isPassword: true,
+              obscureText: _obscureConfirmPassword,
+              onToggleVisibility: () {
+                setState(() => _obscureConfirmPassword = !_obscureConfirmPassword);
+              },
+            ),
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.shield_outlined, color: AppColors.secondary.withOpacity(0.7), size: 14),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Mật khẩu từ 8 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt.',
+                      style: TextStyle(color: AppColors.secondary.withOpacity(0.7), fontSize: 11),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
 
           if (_isLoginTab)
             Row(

@@ -102,18 +102,41 @@ class AuthService {
     required String password,
     String? phone,
   }) async {
-    final response = await ApiClient().post(ApiConfig.register, {
+    final Map<String, dynamic> body = {
       'full_name': fullName,
       'email': email,
       'password': password,
-      'phone': phone,
-    });
+    };
+    if (phone != null && phone.trim().isNotEmpty) {
+      body['phone'] = phone.trim();
+    }
+
+    final response = await ApiClient().post(ApiConfig.register, body);
 
     if (response['success'] == true) {
       return {'success': true, 'message': response['message'] ?? 'Đăng ký tài khoản thành công'};
     }
 
     return {'success': false, 'message': response['message'] ?? 'Đăng ký thất bại'};
+  }
+
+  Future<Map<String, dynamic>> verifyEmail(String token) async {
+    final response = await ApiClient().get(
+      ApiConfig.verifyEmail,
+      queryParams: {'token': token.trim()},
+    );
+
+    if (response['success'] == true) {
+      return {
+        'success': true,
+        'message': response['message'] ?? 'Xác thực email thành công',
+      };
+    }
+
+    return {
+      'success': false,
+      'message': response['message'] ?? 'Mã xác thực không hợp lệ hoặc đã hết hạn',
+    };
   }
 
   Future<Map<String, dynamic>> forgotPassword(String email) async {
