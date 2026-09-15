@@ -18,6 +18,7 @@ class _LoginPageState extends State<LoginPage> {
   bool _obscurePassword = true;
   bool _isLoginTab = true;
   bool _isLoading = false;
+  bool _isGoogleLoading = false;
 
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -131,6 +132,65 @@ class _LoginPageState extends State<LoginPage> {
           );
         }
       }
+    }
+  }
+
+  Future<void> _handleGoogleSignIn() async {
+    setState(() => _isGoogleLoading = true);
+
+    final res = await AuthService().loginWithGoogle();
+
+    if (!mounted) return;
+    setState(() => _isGoogleLoading = false);
+
+    if (res['cancelled'] == true) {
+      return;
+    }
+
+    if (res['success'] == true) {
+      final user = res['user'] as UserModel?;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Xin chào ${user?.fullName ?? ''}! (${user?.roleDisplayName ?? 'Khách hàng'})'),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      if (user != null && user.hasRole('STAFF')) {
+        final hasActive = await StaffService().hasActiveOrUpcomingEvents();
+        if (!mounted) return;
+
+        if (hasActive) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const StaffDashboardPage()),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Tất cả sự kiện của bạn đã kết thúc. Đã chuyển hướng đến giao diện Khách hàng.'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const HomeDiscoveryPage()),
+          );
+        }
+      } else if (user != null && user.isStaff) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const StaffDashboardPage()),
+        );
+      } else {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const HomeDiscoveryPage()),
+        );
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(res['message'] ?? 'Đăng nhập Google không thành công!'),
+          backgroundColor: AppColors.error,
+        ),
+      );
     }
   }
 
@@ -377,7 +437,7 @@ class _LoginPageState extends State<LoginPage> {
           const SizedBox(height: 16),
 
           ElevatedButton(
-            onPressed: _isLoading ? null : _handleSubmit,
+            onPressed: (_isLoading || _isGoogleLoading) ? null : _handleSubmit,
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primaryContainer,
               foregroundColor: Colors.white,
@@ -397,7 +457,98 @@ class _LoginPageState extends State<LoginPage> {
                     ],
                   ),
           ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Expanded(child: Divider(color: AppColors.secondary.withOpacity(0.15))),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Text(
+                  'HOẶC',
+                  style: TextStyle(
+                    color: AppColors.secondary.withOpacity(0.6),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 1,
+                  ),
+                ),
+              ),
+              Expanded(child: Divider(color: AppColors.secondary.withOpacity(0.15))),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _buildGoogleSignInButton(),
         ],
+      ),
+    );
+  }
+
+  Widget _buildGoogleSignInButton() {
+    return Container(
+      width: double.infinity,
+      height: 48,
+      decoration: BoxDecoration(
+        color: const Color(0xFF131F46),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.secondary.withOpacity(0.2)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: (_isLoading || _isGoogleLoading) ? null : _handleGoogleSignIn,
+          child: _isGoogleLoading
+              ? const Center(
+                  child: SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                  ),
+                )
+              : Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _buildGoogleLogo(),
+                    const SizedBox(width: 12),
+                    const Text(
+                      'Tiếp tục với Google',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGoogleLogo() {
+    return Container(
+      width: 24,
+      height: 24,
+      decoration: const BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.white,
+      ),
+      alignment: Alignment.center,
+      child: const Text(
+        'G',
+        style: TextStyle(
+          color: Color(0xFF4285F4),
+          fontWeight: FontWeight.bold,
+          fontSize: 16,
+          fontFamily: 'Roboto',
+        ),
       ),
     );
   }

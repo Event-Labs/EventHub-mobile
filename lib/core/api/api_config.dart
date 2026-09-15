@@ -17,7 +17,12 @@ class ApiConfig {
   static const String login = '/auth/login';
   static const String register = '/auth/register';
   static const String forgotPassword = '/auth/forgot-password';
+  static const String resetPassword = '/auth/reset-password';
+  static const String googleLogin = '/auth/google';
   static const String logout = '/auth/logout';
+
+  // Google OAuth Web Client ID (configured in backend GOOGLE_CLIENT_ID)
+  static const String googleServerClientId = '872381042707-han4prvt3866lm00e9tsakad4oerhtoj.apps.googleusercontent.com';
 
   static const String events = '/events';
   static const String categories = '/events/categories';

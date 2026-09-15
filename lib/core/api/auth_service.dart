@@ -1,3 +1,4 @@
+import 'package:google_sign_in/google_sign_in.dart';
 import '../models/user_model.dart';
 import 'api_client.dart';
 import 'api_config.dart';
@@ -34,6 +35,65 @@ class AuthService {
     }
 
     return {'success': false, 'message': response['message'] ?? 'Đăng nhập thất bại'};
+  }
+
+  Future<Map<String, dynamic>> loginWithGoogle() async {
+    try {
+      final GoogleSignIn googleSignIn = GoogleSignIn(
+        serverClientId: ApiConfig.googleServerClientId,
+        scopes: ['email', 'profile'],
+      );
+
+      // Sign out first to allow account picker
+      try {
+        await googleSignIn.signOut();
+      } catch (_) {}
+
+      final GoogleSignInAccount? googleAccount = await googleSignIn.signIn();
+      if (googleAccount == null) {
+        return {'success': false, 'cancelled': true, 'message': 'Đã hủy đăng nhập Google'};
+      }
+
+      final GoogleSignInAuthentication auth = await googleAccount.authentication;
+      final String? idToken = auth.idToken;
+
+      if (idToken == null || idToken.isEmpty) {
+        return {
+          'success': false,
+          'message': 'Không thể lấy ID Token từ Google. Vui lòng kiểm tra cấu hình OAuth (Package Name & SHA-1).'
+        };
+      }
+
+      final response = await ApiClient().post(ApiConfig.googleLogin, {
+        'credential': idToken,
+      });
+
+      if (response['success'] == true && response['data'] != null) {
+        final data = response['data'];
+        final token = data['accessToken']?.toString();
+        if (token != null) {
+          ApiClient().setAuthToken(token);
+        }
+        if (data['user'] != null) {
+          _currentUser = UserModel.fromJson(data['user']);
+        }
+        return {
+          'success': true,
+          'user': _currentUser,
+          'message': response['message'] ?? 'Đăng nhập Google thành công',
+        };
+      }
+
+      return {
+        'success': false,
+        'message': response['message'] ?? 'Đăng nhập Google thất bại'
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Lỗi khi kết nối Google: $e',
+      };
+    }
   }
 
   Future<Map<String, dynamic>> register({
@@ -136,9 +196,15 @@ class AuthService {
     };
   }
 
-  void logout() {
+  Future<void> logout() async {
     _currentUser = null;
     ApiClient().setAuthToken(null);
+    try {
+      final GoogleSignIn googleSignIn = GoogleSignIn(
+        serverClientId: ApiConfig.googleServerClientId,
+      );
+      await googleSignIn.signOut();
+    } catch (_) {}
   }
 }
 
