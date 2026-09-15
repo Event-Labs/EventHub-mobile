@@ -150,6 +150,28 @@ class AuthService {
     return {'success': false, 'message': response['message'] ?? 'Không thể gửi yêu cầu'};
   }
 
+  Future<Map<String, dynamic>> resetPassword({
+    required String token,
+    required String newPassword,
+  }) async {
+    final response = await ApiClient().post(ApiConfig.resetPassword, {
+      'token': token.trim(),
+      'newPassword': newPassword,
+    });
+
+    if (response['success'] == true) {
+      return {
+        'success': true,
+        'message': response['message'] ?? 'Đặt lại mật khẩu thành công',
+      };
+    }
+
+    return {
+      'success': false,
+      'message': response['message'] ?? 'Mã đặt lại mật khẩu không hợp lệ hoặc đã hết hạn',
+    };
+  }
+
   Future<Map<String, dynamic>> fetchProfile() async {
     final response = await ApiClient().get('/users/me');
     if (response['success'] == true && response['data'] != null) {
