@@ -28,6 +28,7 @@ class ApiConfig {
   static const String staffVerifyQr = '/staff/tickets/verify-qr';
   static const String staffCheckInQr = '/staff/tickets/check-in/qr';
   static const String staffSearchTickets = '/staff/tickets/search';
+  static const String staffAssignedEvents = '/operations/staff/events';
 
   static const String aiFaq = '/ai-faq/chat';
 }

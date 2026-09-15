@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/api/auth_service.dart';
+import '../../../../core/api/staff_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../auth/presentation/pages/login_page.dart';
 import '../../../home/presentation/pages/home_discovery_page.dart';
@@ -19,9 +20,10 @@ class _StaffDashboardPageState extends State<StaffDashboardPage> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       final user = AuthService().currentUser;
       if (user == null || !user.isStaff) {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Bạn không có quyền truy cập cổng nhân viên!'),
@@ -31,6 +33,22 @@ class _StaffDashboardPageState extends State<StaffDashboardPage> {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => user == null ? const LoginPage() : const HomeDiscoveryPage()),
         );
+        return;
+      }
+
+      if (user.hasRole('STAFF')) {
+        final hasActive = await StaffService().hasActiveOrUpcomingEvents();
+        if (!hasActive && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Tất cả sự kiện được phân công đã kết thúc. Chuyển hướng đến trang Khách hàng.'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const HomeDiscoveryPage()),
+          );
+        }
       }
     });
   }

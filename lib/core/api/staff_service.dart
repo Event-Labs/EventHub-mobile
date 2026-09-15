@@ -79,4 +79,54 @@ class StaffService {
     }
     return {'success': false, 'message': response['message'] ?? 'Không thể check-in vé này'};
   }
+
+  Future<List<Map<String, dynamic>>> getAssignedEvents() async {
+    try {
+      final response = await ApiClient().get(ApiConfig.staffAssignedEvents);
+      if (response != null && response['success'] == true && response['data'] is List) {
+        return (response['data'] as List)
+            .where((item) => item is Map)
+            .map((item) => Map<String, dynamic>.from(item as Map))
+            .toList();
+      }
+      return [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<bool> hasActiveOrUpcomingEvents([DateTime? referenceTime]) async {
+    try {
+      final events = await getAssignedEvents();
+      return checkHasActiveOrUpcomingEvents(events, referenceTime: referenceTime);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static bool checkHasActiveOrUpcomingEvents(
+    List<Map<String, dynamic>> events, {
+    DateTime? referenceTime,
+  }) {
+    if (events.isEmpty) {
+      return false;
+    }
+
+    final now = referenceTime ?? DateTime.now();
+    for (final item in events) {
+      final endTimeStr = item['end_time']?.toString();
+      final startTimeStr = item['start_time']?.toString();
+
+      final endTime = endTimeStr != null ? DateTime.tryParse(endTimeStr) : null;
+      final startTime = startTimeStr != null ? DateTime.tryParse(startTimeStr) : null;
+      final effectiveEnd = endTime ?? startTime;
+
+      // If effectiveEnd is null or not strictly in the past, event is ongoing or upcoming
+      if (effectiveEnd == null || !effectiveEnd.isBefore(now)) {
+        return true;
+      }
+    }
+    return false;
+  }
 }
+

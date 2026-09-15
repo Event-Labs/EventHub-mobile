@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/api/auth_service.dart';
+import '../../../../core/api/staff_service.dart';
 import '../../../../core/models/user_model.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../auth/presentation/pages/login_page.dart';
@@ -16,6 +17,7 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   bool _isLoading = false;
+  bool _hasActiveStaffEvents = false;
 
   @override
   void initState() {
@@ -28,8 +30,20 @@ class _ProfilePageState extends State<ProfilePage> {
       setState(() => _isLoading = true);
     }
     await AuthService().fetchProfile();
+    final user = AuthService().currentUser;
+    bool hasActive = false;
+    if (user != null && user.isStaff) {
+      if (user.hasRole('STAFF')) {
+        hasActive = await StaffService().hasActiveOrUpcomingEvents();
+      } else {
+        hasActive = true;
+      }
+    }
     if (mounted) {
-      setState(() => _isLoading = false);
+      setState(() {
+        _hasActiveStaffEvents = hasActive;
+        _isLoading = false;
+      });
     }
   }
 
@@ -281,15 +295,33 @@ class _ProfilePageState extends State<ProfilePage> {
               const SizedBox(height: 24),
 
               // Profile Options Menu
-              if (user?.isStaff == true) ...[
+              if (_hasActiveStaffEvents) ...[
                 _buildProfileOption(
                   icon: Icons.badge_outlined,
                   title: 'Cổng nhân sự (Staff Portal)',
                   subtitle: 'Quản lý soát vé & tra cứu người tham dự',
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const StaffDashboardPage()),
-                    );
+                  onTap: () async {
+                    if (user?.hasRole('STAFF') == true) {
+                      final hasActive = await StaffService().hasActiveOrUpcomingEvents();
+                      if (!context.mounted) return;
+                      if (hasActive) {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const StaffDashboardPage()),
+                        );
+                      } else {
+                        setState(() => _hasActiveStaffEvents = false);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Tất cả sự kiện được phân công đã kết thúc. Không thể vào cổng nhân sự.'),
+                            backgroundColor: Colors.orange,
+                          ),
+                        );
+                      }
+                    } else {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const StaffDashboardPage()),
+                      );
+                    }
                   },
                 ),
               ],

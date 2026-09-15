@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:eventhub_mobile/core/api/auth_service.dart';
 import 'package:eventhub_mobile/core/models/user_model.dart';
 import 'package:eventhub_mobile/core/theme/app_colors.dart';
+import 'package:eventhub_mobile/core/api/staff_service.dart';
 import 'package:eventhub_mobile/features/auth/presentation/pages/forgot_password_page.dart';
 import 'package:eventhub_mobile/features/home/presentation/pages/home_discovery_page.dart';
 import 'package:eventhub_mobile/features/staff/presentation/pages/staff_dashboard_page.dart';
@@ -48,7 +49,6 @@ class _LoginPageState extends State<LoginPage> {
     if (_isLoginTab) {
       // Login Flow
       final res = await AuthService().login(email: email, password: password);
-      setState(() => _isLoading = false);
 
       if (mounted) {
         if (res['success'] == true) {
@@ -59,20 +59,46 @@ class _LoginPageState extends State<LoginPage> {
               backgroundColor: Colors.green,
             ),
           );
-          if (user != null && user.isStaff) {
+
+          if (user != null && user.hasRole('STAFF')) {
+            final hasActive = await StaffService().hasActiveOrUpcomingEvents();
+            if (!mounted) return;
+            setState(() => _isLoading = false);
+
+            if (hasActive) {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (_) => const StaffDashboardPage()),
+              );
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Tất cả sự kiện của bạn đã kết thúc. Đã chuyển hướng đến giao diện Khách hàng.'),
+                  backgroundColor: Colors.orange,
+                ),
+              );
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (_) => const HomeDiscoveryPage()),
+              );
+            }
+          } else if (user != null && user.isStaff) {
+            setState(() => _isLoading = false);
             Navigator.of(context).pushReplacement(
               MaterialPageRoute(builder: (_) => const StaffDashboardPage()),
             );
           } else {
+            setState(() => _isLoading = false);
             Navigator.of(context).pushReplacement(
               MaterialPageRoute(builder: (_) => const HomeDiscoveryPage()),
             );
           }
         } else {
+          setState(() => _isLoading = false);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(res['message'] ?? 'Đăng nhập không thành công!'), backgroundColor: AppColors.error),
           );
         }
+      } else {
+        setState(() => _isLoading = false);
       }
     } else {
       // Register Flow
@@ -137,8 +163,6 @@ class _LoginPageState extends State<LoginPage> {
                       _buildBrandIdentity(),
                       const SizedBox(height: 30),
                       _buildAuthCard(),
-                      const SizedBox(height: 24),
-                      _buildStaffPortalLink(),
                       const SizedBox(height: 40),
                     ],
                   ),
@@ -485,50 +509,7 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  Widget _buildStaffPortalLink() {
-    return GestureDetector(
-      onTap: () {
-        final currentUser = AuthService().currentUser;
-        if (currentUser != null && currentUser.isStaff) {
-          Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const StaffDashboardPage()),
-          );
-        } else {
-          setState(() => _isLoginTab = true);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Vui lòng đăng nhập bằng tài khoản Ban Tổ Chức hoặc Nhân viên!'),
-              backgroundColor: AppColors.primaryContainer,
-            ),
-          );
-        }
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          color: const Color(0xCC0C1446),
-          borderRadius: BorderRadius.circular(30),
-          border: Border.all(color: AppColors.secondary.withOpacity(0.15)),
-        ),
-        child: const Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.verified_user, color: AppColors.tertiary, size: 18),
-            SizedBox(width: 8),
-            Text(
-              'Bạn là Ban Tổ Chức / Staff?',
-              style: TextStyle(color: AppColors.secondary, fontSize: 13),
-            ),
-            SizedBox(width: 4),
-            Text(
-              'Đăng nhập Staff',
-              style: TextStyle(color: AppColors.primaryContainer, fontSize: 13, fontWeight: FontWeight.w600),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+
 
   Widget _buildFooter() {
     return Padding(
