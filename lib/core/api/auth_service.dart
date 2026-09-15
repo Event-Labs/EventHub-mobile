@@ -220,15 +220,22 @@ class AuthService {
   }
 
   Future<Map<String, dynamic>> changePassword({
-    required String currentPassword,
+    String? currentPassword,
     required String newPassword,
   }) async {
-    final response = await ApiClient().patch('/users/me/password', {
-      'currentPassword': currentPassword,
+    final Map<String, dynamic> body = {
       'newPassword': newPassword,
-    });
+    };
+    if (currentPassword != null && currentPassword.trim().isNotEmpty) {
+      body['currentPassword'] = currentPassword.trim();
+    }
+
+    final response = await ApiClient().patch('/users/me/password', body);
 
     if (response['success'] == true) {
+      if (_currentUser != null) {
+        _currentUser = _currentUser!.copyWith(hasPassword: true);
+      }
       return {
         'success': true,
         'message': response['message'] ?? 'Đổi mật khẩu thành công'

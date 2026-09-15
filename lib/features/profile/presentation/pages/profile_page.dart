@@ -58,9 +58,12 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _openChangePassword() async {
-    await Navigator.of(context).push(
+    final updated = await Navigator.of(context).push<bool>(
       MaterialPageRoute(builder: (_) => const ChangePasswordPage()),
     );
+    if (updated == true && mounted) {
+      _fetchLatestProfile();
+    }
   }
 
   Future<void> _handleLogout() async {
@@ -333,8 +336,10 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
               _buildProfileOption(
                 icon: Icons.lock_outline,
-                title: 'Đổi mật khẩu',
-                subtitle: 'Cập nhật mật khẩu bảo mật tài khoản',
+                title: user?.hasPassword == false ? 'Thiết lập mật khẩu' : 'Đổi mật khẩu',
+                subtitle: user?.hasPassword == false
+                    ? 'Tạo mật khẩu để đăng nhập bằng email'
+                    : 'Cập nhật mật khẩu bảo mật tài khoản',
                 onTap: _openChangePassword,
               ),
               _buildProfileOption(
