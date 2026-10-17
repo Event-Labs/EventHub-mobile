@@ -4,6 +4,10 @@ import '../../../../core/api/staff_service.dart';
 import '../../../../core/models/user_model.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../auth/presentation/pages/login_page.dart';
+import '../../../favorites/presentation/pages/favorite_events_page.dart';
+import '../../../feedback/presentation/pages/feedback_page.dart';
+import '../../../notifications/presentation/pages/notifications_page.dart';
+import '../../../refunds/presentation/pages/my_refunds_page.dart';
 import '../../../staff/presentation/pages/staff_dashboard_page.dart';
 import 'change_password_page.dart';
 import 'edit_profile_page.dart';
@@ -335,18 +339,62 @@ class _ProfilePageState extends State<ProfilePage> {
                 onTap: _openEditProfile,
               ),
               _buildProfileOption(
+                icon: Icons.favorite_border,
+                title: 'Sự kiện yêu thích',
+                subtitle: 'Xem danh sách các sự kiện đã lưu',
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const FavoriteEventsPage()),
+                  );
+                },
+              ),
+              _buildProfileOption(
+                icon: Icons.replay_circle_filled_outlined,
+                title: 'Lịch sử hoàn vé',
+                subtitle: 'Theo dõi tiến độ và trạng thái các yêu cầu hoàn trả vé',
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const MyRefundsPage()),
+                  );
+                },
+              ),
+              _buildProfileOption(
+                icon: Icons.star_outline_rounded,
+                title: 'Đánh giá & Phản hồi',
+                subtitle: 'Chia sẻ cảm nhận về các sự kiện bạn đã tham dự',
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const FeedbackPage()),
+                  );
+                },
+              ),
+              _buildProfileOption(
+                icon: Icons.notifications_none,
+                title: 'Thông báo',
+                subtitle: 'Lịch trình sự kiện & cập nhật đơn đặt vé',
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const NotificationsPage()),
+                  );
+                },
+              ),
+              _buildProfileOption(
+                icon: Icons.tune,
+                title: 'Cài đặt thông báo',
+                subtitle: 'Quản lý nhắc nhở lịch diễn & ưu đãi',
+                onTap: _showNotificationSettings,
+              ),
+              _buildProfileOption(
                 icon: Icons.lock_outline,
                 title: user?.hasPassword == false ? 'Thiết lập mật khẩu' : 'Đổi mật khẩu',
                 subtitle: user?.hasPassword == false
                     ? 'Tạo mật khẩu để đăng nhập bằng email'
                     : 'Cập nhật mật khẩu bảo mật tài khoản',
                 onTap: _openChangePassword,
-              ),
-              _buildProfileOption(
-                icon: Icons.notifications_none,
-                title: 'Cài đặt thông báo',
-                subtitle: 'Quản lý thông báo sự kiện & khuyến mãi',
-                onTap: _showNotificationSettings,
               ),
               _buildProfileOption(
                 icon: Icons.help_outline,

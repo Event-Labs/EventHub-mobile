@@ -7,10 +7,15 @@ class TicketsService {
   factory TicketsService() => _instance;
   TicketsService._internal();
 
-  Future<List<TicketModel>> getMyTickets() async {
-    final response = await ApiClient().get(ApiConfig.myTickets);
+  Future<List<TicketModel>> getMyTickets({String? status}) async {
+    final Map<String, String> queryParams = {};
+    if (status != null && status != 'ALL' && status.isNotEmpty) {
+      queryParams['status'] = status;
+    }
+
+    final response = await ApiClient().get(ApiConfig.myTickets, queryParams: queryParams);
     if (response['success'] == true && response['data'] != null) {
-      final List list = response['data'];
+      final List list = response['data'] is List ? response['data'] : [];
       return list.map((e) => TicketModel.fromJson(e)).toList();
     }
 
@@ -19,50 +24,58 @@ class TicketsService {
       TicketModel(
         ticketId: 't-101',
         ticketCode: 'TICK-NEON-8842',
+        qrCode: 'TICK-NEON-8842',
+        eventId: 'evt-1',
         eventName: 'Neon Horizon Festival 2025',
         ticketType: 'VIP Phase 1',
         seatName: 'Zone A - Row 02',
-        sessionTime: '28/12/2025 • 18:00',
-        status: 'AVAILABLE',
+        sessionTime: DateTime.now().add(const Duration(days: 3)).toIso8601String(),
+        status: 'VALID',
         price: 450000,
-        customerName: 'Lê Hoàng Nam',
-        customerEmail: 'nam.le@eventhub.vn',
+        attendeeName: 'Lê Hoàng Nam',
+        attendeeEmail: 'nam.le@eventhub.vn',
+        venue: TicketVenueModel(
+          name: 'SECC Exhibition Center',
+          addressLine: '799 Nguyễn Văn Linh',
+          district: 'Quận 7',
+          city: 'TP. Hồ Chí Minh',
+        ),
       ),
       TicketModel(
         ticketId: 't-102',
         ticketCode: 'TICK-INDI-1290',
+        qrCode: 'TICK-INDI-1290',
+        eventId: 'evt-2',
         eventName: 'The Nocturnal Acoustic Echoes',
         ticketType: 'Standard Access',
         seatName: 'Free Standing',
-        sessionTime: '03/01/2026 • 20:00',
+        sessionTime: DateTime.now().subtract(const Duration(days: 2)).toIso8601String(),
         status: 'USED',
         price: 250000,
-        customerName: 'Lê Hoàng Nam',
-        checkInTime: '03/01/2026 19:45',
+        attendeeName: 'Lê Hoàng Nam',
+        attendeeEmail: 'nam.le@eventhub.vn',
+        checkInTime: DateTime.now().subtract(const Duration(days: 2, hours: 1)).toIso8601String(),
+        venue: TicketVenueModel(
+          name: 'Hard Rock Cafe',
+          addressLine: '39 Lê Duẩn',
+          district: 'Quận 1',
+          city: 'TP. Hồ Chí Minh',
+        ),
       ),
     ];
   }
 
-  Future<Map<String, dynamic>> createOrder({
-    required String eventId,
-    required String ticketTypeId,
-    required int quantity,
-    String? promotionCode,
-  }) async {
-    final response = await ApiClient().post(ApiConfig.orders, {
-      'event_id': eventId,
-      'ticket_type_id': ticketTypeId,
-      'quantity': quantity,
-      'promotion_code': promotionCode,
-    });
-
-    if (response['success'] == true) {
-      return {
-        'success': true,
-        'message': response['message'] ?? 'Đặt vé thành công!',
-        'order': response['data'],
-      };
+  Future<TicketModel?> getTicketDetail(String ticketId) async {
+    final response = await ApiClient().get(ApiConfig.ticketDetail(ticketId));
+    if (response['success'] == true && response['data'] != null) {
+      return TicketModel.fromJson(response['data']);
     }
-    return {'success': false, 'message': response['message'] ?? 'Không thể đặt vé'};
+    // Fallback
+    final list = await getMyTickets();
+    try {
+      return list.firstWhere((t) => t.ticketId == ticketId);
+    } catch (_) {
+      return list.isNotEmpty ? list.first : null;
+    }
   }
 }
