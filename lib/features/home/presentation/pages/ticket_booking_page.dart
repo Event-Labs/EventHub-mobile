@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
-import '../../../../core/api/tickets_service.dart';
+import 'package:intl/intl.dart';
+import '../../../../core/api/auth_service.dart';
+import '../../../../core/api/orders_service.dart';
 import '../../../../core/models/event_model.dart';
 import '../../../../core/theme/app_colors.dart';
+import 'payment_page.dart';
 
 class TicketBookingPage extends StatefulWidget {
   final EventModel event;
@@ -13,66 +16,150 @@ class TicketBookingPage extends StatefulWidget {
 }
 
 class _TicketBookingPageState extends State<TicketBookingPage> {
+  late EventSessionModel? _selectedSession;
+  late TicketTypeModel? _selectedTicketType;
   int _quantity = 1;
-  String _selectedTicketType = 'VIP Phase 1';
-  double _ticketPrice = 450000;
+  final _nameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
   final _promoController = TextEditingController();
-  bool _isBooking = false;
+  bool _termsAccepted = true;
+  bool _isCheckingOut = false;
 
-  final List<Map<String, dynamic>> _ticketOptions = [
-    {'name': 'VIP Phase 1', 'price': 450000.0, 'desc': 'Khu vực VIP gần sân khấu, tặng nước suối & Fast Pass lane'},
-    {'name': 'Standard Access', 'price': 250000.0, 'desc': 'Vé phổ thông tự do trải nghiệm sự kiện'},
-    {'name': 'Early Bird Ticket', 'price': 180000.0, 'desc': 'Số lượng giới hạn dành cho người đăng ký sớm'},
-  ];
+  @override
+  void initState() {
+    super.initState();
+    // Pre-populate with logged in user info
+    final user = AuthService().currentUser;
+    if (user != null) {
+      _nameController.text = user.fullName;
+      _emailController.text = user.email;
+      _phoneController.text = user.phone ?? '';
+    }
 
-  Future<void> _handleConfirmBooking() async {
-    setState(() => _isBooking = true);
-    final result = await TicketsService().createOrder(
+    // Default session
+    if (widget.event.sessions.isNotEmpty) {
+      _selectedSession = widget.event.sessions.first;
+    } else {
+      _selectedSession = null;
+    }
+
+    // Default ticket type
+    final availableTypes = _getAvailableTicketTypes();
+    if (availableTypes.isNotEmpty) {
+      _selectedTicketType = availableTypes.first;
+    } else {
+      _selectedTicketType = TicketTypeModel(
+        id: 'tt-mock-1',
+        name: 'Vé Tiêu Chuẩn (Standard)',
+        price: widget.event.minPrice ?? 250000,
+        availableQuantity: 50,
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    _phoneController.dispose();
+    _promoController.dispose();
+    super.dispose();
+  }
+
+  List<TicketTypeModel> _getAvailableTicketTypes() {
+    if (_selectedSession != null && _selectedSession!.ticketTypes.isNotEmpty) {
+      return _selectedSession!.ticketTypes;
+    }
+    if (widget.event.ticketTypes.isNotEmpty) {
+      return widget.event.ticketTypes;
+    }
+    return [
+      TicketTypeModel(
+        id: 'tt-mock-vip',
+        name: 'VIP Experience Pass',
+        price: widget.event.maxPrice ?? 450000,
+        description: 'Vị trí đắc địa gần sân khấu, lối đi ưu tiên Fast Pass',
+        availableQuantity: 20,
+      ),
+      TicketTypeModel(
+        id: 'tt-mock-ga',
+        name: 'Standard Access Pass',
+        price: widget.event.minPrice ?? 250000,
+        description: 'Vé phổ thông tự do tham gia sự kiện',
+        availableQuantity: 100,
+      ),
+    ];
+  }
+
+  Future<void> _handleCheckout() async {
+    final name = _nameController.text.trim();
+    final email = _emailController.text.trim();
+    final phone = _phoneController.text.trim();
+
+    if (name.isEmpty || email.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Vui lòng nhập Họ tên và Email người nhận vé!'), backgroundColor: AppColors.error),
+      );
+      return;
+    }
+
+    if (!_termsAccepted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Vui lòng đồng ý với điều khoản đặt vé!'), backgroundColor: AppColors.error),
+      );
+      return;
+    }
+
+    setState(() => _isCheckingOut = true);
+
+    final ticketTypeId = _selectedTicketType?.id ?? 'tt-1';
+    final attendees = [
+      OrderAttendeeInput(
+        ticketTypeId: ticketTypeId,
+        name: name,
+        email: email,
+      ),
+    ];
+    final items = [
+      OrderItemInput(
+        ticketTypeId: ticketTypeId,
+        quantity: _quantity,
+      ),
+    ];
+
+    final result = await OrdersService().checkoutOrder(
       eventId: widget.event.id,
-      ticketTypeId: _selectedTicketType,
-      quantity: _quantity,
-      promotionCode: _promoController.text.trim(),
+      buyerName: name,
+      buyerEmail: email,
+      buyerPhone: phone.isNotEmpty ? phone : null,
+      promoCode: _promoController.text.trim().isNotEmpty ? _promoController.text.trim() : null,
+      eventTermsAccepted: _termsAccepted,
+      attendees: attendees,
+      items: items,
     );
-    setState(() => _isBooking = false);
+
+    setState(() => _isCheckingOut = false);
 
     if (mounted) {
-      if (result['success']) {
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (ctx) => AlertDialog(
-            backgroundColor: const Color(0xFF0C1446),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            title: const Column(
-              children: [
-                Icon(Icons.check_circle, color: Color(0xFF22C55E), size: 60),
-                SizedBox(height: 12),
-                Text('Đặt Vé Thành Công!', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-              ],
+      if (result['success'] == true && result['data'] != null) {
+        final orderData = result['data'];
+        final orderId = orderData['order']?['id']?.toString() ?? '';
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => PaymentPage(
+              orderId: orderId,
+              initialData: orderData,
             ),
-            content: Text(
-              'Đơn hàng cho ${widget.event.title} đã được thanh toán và xác nhận. Mã vé đã được thêm vào ví vé của bạn!',
-              style: const TextStyle(color: AppColors.secondary, fontSize: 13),
-              textAlign: TextAlign.center,
-            ),
-            actions: [
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(ctx); // Close dialog
-                  Navigator.pop(context); // Return home/detail
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryContainer,
-                  minimumSize: const Size(double.infinity, 44),
-                ),
-                child: const Text('Xem Vé Của Tôi', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-              ),
-            ],
           ),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(result['message']), backgroundColor: AppColors.error),
+          SnackBar(
+            content: Text(result['message'] ?? 'Không thể tạo đơn hàng. Vui lòng thử lại.'),
+            backgroundColor: AppColors.error,
+          ),
         );
       }
     }
@@ -80,17 +167,16 @@ class _TicketBookingPageState extends State<TicketBookingPage> {
 
   @override
   Widget build(BuildContext context) {
-    final totalPrice = _ticketPrice * _quantity;
+    final ticketTypes = _getAvailableTicketTypes();
+    final unitPrice = _selectedTicketType?.price ?? (widget.event.minPrice ?? 250000);
+    final totalPrice = unitPrice * _quantity;
+    final formattedTotal = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ', decimalDigits: 0).format(totalPrice);
 
     return Scaffold(
-      backgroundColor: const Color(0xFF081126),
+      backgroundColor: const Color(0xFF070D1E),
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: const Color(0xFF070D1E),
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
         title: const Text('Đặt Vé Sự Kiện', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
       ),
       body: SingleChildScrollView(
@@ -98,23 +184,24 @@ class _TicketBookingPageState extends State<TicketBookingPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Event summary card
+            // Event mini card
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: const Color(0xFF0C1446),
+                color: const Color(0xFF101932),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.secondary.withOpacity(0.15)),
+                border: Border.all(color: Colors.white.withOpacity(0.08)),
               ),
               child: Row(
                 children: [
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: Image.network(
-                      widget.event.coverImageUrl ?? 'https://lh3.googleusercontent.com/aida-public/AB6AXuCsh1MyeOrExv0OTGWPXymZBnHdDiqnLogqJTML1O6osQPpeQP11Xa069TLuCwM-qYBI6xOmazp-7pg5MCxPM4TcaDHr7rhFP7PRyR7QS79TjINZdZ4k4DfgPm1umU1TYFb7w-_8bpoVl9R1VTWzNVop69NIQAPIhcnx8LZ1FDgsJ4ME58mNas6uSxXTAiSOwUKbbgiKBdEG1KIhXlEOKa-7pEzLNe1z7_DJbEJhZKSIizd6czYP7-3',
-                      width: 70,
-                      height: 70,
-                      fit: BoxFit.cover,
+                    borderRadius: BorderRadius.circular(12),
+                    child: SizedBox(
+                      width: 72,
+                      height: 72,
+                      child: widget.event.coverImageUrl != null
+                          ? Image.network(widget.event.coverImageUrl!, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(color: Colors.white10))
+                          : Container(color: Colors.white10),
                     ),
                   ),
                   const SizedBox(width: 14),
@@ -122,60 +209,117 @@ class _TicketBookingPageState extends State<TicketBookingPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(widget.event.title, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 4),
-                        Text(widget.event.locationName ?? 'SECC Quận 7', style: const TextStyle(color: AppColors.secondary, fontSize: 12)),
-                        Text(widget.event.startDate ?? 'Fri, Dec 28 • 18:00', style: const TextStyle(color: AppColors.primaryContainer, fontSize: 12, fontWeight: FontWeight.w600)),
+                        Text(
+                          widget.event.title,
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          widget.event.formattedDateTime,
+                          style: const TextStyle(color: Color(0xFFB0CADD), fontSize: 12),
+                        ),
                       ],
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 24),
-            const Text('CHỌN LOẠI VÉ', style: TextStyle(color: AppColors.secondary, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1)),
-            const SizedBox(height: 12),
 
-            ..._ticketOptions.map((opt) {
-              final isSelected = _selectedTicketType == opt['name'];
+            const SizedBox(height: 24),
+
+            // Session selector if multiple sessions
+            if (widget.event.sessions.length > 1) ...[
+              const Text('Chọn suất diễn:', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: widget.event.sessions.map((s) {
+                  final isSelected = _selectedSession?.id == s.id;
+                  return ChoiceChip(
+                    label: Text(s.name ?? s.formattedTime),
+                    selected: isSelected,
+                    selectedColor: AppColors.primaryContainer,
+                    backgroundColor: const Color(0xFF101932),
+                    labelStyle: TextStyle(
+                      color: isSelected ? Colors.white : const Color(0xFFB0CADD),
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      fontSize: 13,
+                    ),
+                    onSelected: (val) {
+                      if (val) {
+                        setState(() {
+                          _selectedSession = s;
+                          final avail = _getAvailableTicketTypes();
+                          if (avail.isNotEmpty) _selectedTicketType = avail.first;
+                        });
+                      }
+                    },
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 24),
+            ],
+
+            // Ticket Types List
+            const Text('Chọn hạng vé:', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+            const SizedBox(height: 12),
+            ...ticketTypes.map((t) {
+              final isSelected = _selectedTicketType?.id == t.id;
+              final isSoldOut = t.isSoldOut;
               return GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _selectedTicketType = opt['name'];
-                    _ticketPrice = opt['price'];
-                  });
-                },
+                onTap: isSoldOut ? null : () => setState(() => _selectedTicketType = t),
                 child: Container(
                   margin: const EdgeInsets.only(bottom: 12),
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: isSelected ? AppColors.primaryContainer.withOpacity(0.15) : const Color(0xFF0C1446),
-                    borderRadius: BorderRadius.circular(14),
+                    color: isSelected ? const Color(0xFF18284F) : const Color(0xFF101932),
+                    borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: isSelected ? AppColors.primaryContainer : AppColors.secondary.withOpacity(0.15),
-                      width: isSelected ? 2 : 1,
+                      color: isSelected ? AppColors.primaryContainer : Colors.white.withOpacity(0.08),
+                      width: isSelected ? 1.5 : 1,
                     ),
                   ),
                   child: Row(
                     children: [
                       Icon(
                         isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
-                        color: isSelected ? AppColors.primaryContainer : AppColors.secondary,
+                        color: isSelected ? AppColors.primaryContainer : Colors.white38,
+                        size: 20,
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 14),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(opt['name'], style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
-                            const SizedBox(height: 2),
-                            Text(opt['desc'], style: const TextStyle(color: AppColors.secondary, fontSize: 11)),
+                            Text(
+                              t.name,
+                              style: TextStyle(
+                                color: isSoldOut ? Colors.white38 : Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
+                            ),
+                            if (t.description != null && t.description!.isNotEmpty) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                t.description!,
+                                style: const TextStyle(color: Color(0xFF8B9CB5), fontSize: 12),
+                              ),
+                            ],
                           ],
                         ),
                       ),
+                      const SizedBox(width: 10),
                       Text(
-                        '${(opt['price'] as double).toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')} đ',
-                        style: TextStyle(color: isSelected ? AppColors.primaryContainer : Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                        isSoldOut ? 'Hết vé' : t.formattedPrice,
+                        style: TextStyle(
+                          color: isSoldOut ? AppColors.error : const Color(0xFFFFB690),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
                       ),
                     ],
                   ),
@@ -184,25 +328,33 @@ class _TicketBookingPageState extends State<TicketBookingPage> {
             }),
 
             const SizedBox(height: 20),
+
+            // Quantity selector
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Số lượng vé:', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                const Text('Số lượng vé:', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
                 Container(
                   decoration: BoxDecoration(
-                    color: const Color(0xFF122155),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: AppColors.secondary.withOpacity(0.2)),
+                    color: const Color(0xFF101932),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.white.withOpacity(0.1)),
                   ),
                   child: Row(
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.remove, color: Colors.white, size: 20),
+                        icon: const Icon(Icons.remove, color: Colors.white, size: 18),
                         onPressed: _quantity > 1 ? () => setState(() => _quantity--) : null,
                       ),
-                      Text('$_quantity', style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Text(
+                          '$_quantity',
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                        ),
+                      ),
                       IconButton(
-                        icon: const Icon(Icons.add, color: Colors.white, size: 20),
+                        icon: const Icon(Icons.add, color: Colors.white, size: 18),
                         onPressed: _quantity < 10 ? () => setState(() => _quantity++) : null,
                       ),
                     ],
@@ -211,111 +363,131 @@ class _TicketBookingPageState extends State<TicketBookingPage> {
               ],
             ),
 
+            const SizedBox(height: 28),
+
+            // Attendee Info section
+            const Text('Thông tin người nhận vé:', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+            const SizedBox(height: 12),
+
+            _buildInputField('Họ và tên *', _nameController, Icons.person),
+            const SizedBox(height: 12),
+            _buildInputField('Email nhận vé *', _emailController, Icons.email, keyboardType: TextInputType.emailAddress),
+            const SizedBox(height: 12),
+            _buildInputField('Số điện thoại', _phoneController, Icons.phone, keyboardType: TextInputType.phone),
+
             const SizedBox(height: 24),
-            const Text('MÃ GIẢM GIÁ (PROMO)', style: TextStyle(color: AppColors.secondary, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1)),
-            const SizedBox(height: 8),
+
+            // Promo code
+            const Text('Mã giảm giá (nếu có):', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+            const SizedBox(height: 10),
             Row(
               children: [
                 Expanded(
                   child: Container(
-                    height: 46,
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF122155),
-                      borderRadius: BorderRadius.circular(10),
+                      color: const Color(0xFF101932),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: Colors.white.withOpacity(0.1)),
                     ),
                     child: TextField(
                       controller: _promoController,
-                      style: const TextStyle(color: Colors.white),
+                      style: const TextStyle(color: Colors.white, fontSize: 14),
+                      textCapitalization: TextCapitalization.characters,
                       decoration: const InputDecoration(
-                        hintText: 'Nhập mã VOUCHER...',
-                        hintStyle: TextStyle(color: Colors.white38, fontSize: 13),
+                        hintText: 'Nhập mã voucher / khuyến mãi',
+                        hintStyle: TextStyle(color: Color(0xFF8B9CB5), fontSize: 13),
                         border: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Đã áp dụng mã giảm giá 10%!'), backgroundColor: Colors.green),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.surfaceContainerHigh,
-                    minimumSize: const Size(80, 46),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  ),
-                  child: const Text('Áp Dụng', style: TextStyle(color: Colors.white)),
                 ),
               ],
             ),
 
-            const SizedBox(height: 32),
+            const SizedBox(height: 20),
+
+            // Terms checkbox
+            Row(
+              children: [
+                Checkbox(
+                  value: _termsAccepted,
+                  activeColor: AppColors.primaryContainer,
+                  onChanged: (val) => setState(() => _termsAccepted = val ?? false),
+                ),
+                const Expanded(
+                  child: Text(
+                    'Tôi đã đọc và đồng ý với các quy định, điều khoản sự kiện & chính sách hủy vé của ban tổ chức.',
+                    style: TextStyle(color: Color(0xFFB0CADD), fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 24),
+
+            // Total breakdown
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFF0C1446),
+                color: const Color(0xFF101932),
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: Column(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('Đơn giá:', style: TextStyle(color: AppColors.secondary, fontSize: 13)),
-                      Text('${_ticketPrice.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')} đ x $_quantity', style: const TextStyle(color: Colors.white, fontSize: 13)),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  const Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('Phí hệ thống:', style: TextStyle(color: AppColors.secondary, fontSize: 13)),
-                      Text('Miễn phí', style: TextStyle(color: Colors.greenAccent, fontSize: 13)),
-                    ],
-                  ),
-                  const Divider(color: Colors.white12, height: 24),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('Tổng thanh toán:', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-                      Text(
-                        '${totalPrice.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')} đ',
-                        style: const TextStyle(color: AppColors.primaryContainer, fontWeight: FontWeight.bold, fontSize: 20),
-                      ),
-                    ],
+                  const Text('Tổng thanh toán:', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
+                  Text(
+                    formattedTotal,
+                    style: const TextStyle(color: Color(0xFFFFB690), fontSize: 20, fontWeight: FontWeight.w800),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 24),
 
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton(
-                onPressed: _isBooking ? null : _handleConfirmBooking,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryContainer,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  elevation: 8,
-                ),
-                child: _isBooking
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.payment, color: Colors.white),
-                          SizedBox(width: 8),
-                          Text('XÁC NHẬN ĐẶT VÉ', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-                        ],
-                      ),
+            const SizedBox(height: 28),
+
+            // Submit button
+            ElevatedButton(
+              onPressed: _isCheckingOut ? null : _handleCheckout,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryContainer,
+                minimumSize: const Size(double.infinity, 52),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                elevation: 6,
               ),
+              child: _isCheckingOut
+                  ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Text(
+                      'Tiến Hành Thanh Toán PayOS',
+                      style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
             ),
-            const SizedBox(height: 40),
+
+            const SizedBox(height: 32),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInputField(String label, TextEditingController controller, IconData icon, {TextInputType? keyboardType}) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF101932),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withOpacity(0.1)),
+      ),
+      child: TextField(
+        controller: controller,
+        keyboardType: keyboardType,
+        style: const TextStyle(color: Colors.white, fontSize: 14),
+        decoration: InputDecoration(
+          prefixIcon: Icon(icon, color: const Color(0xFFB0CADD), size: 20),
+          labelText: label,
+          labelStyle: const TextStyle(color: Color(0xFF8B9CB5), fontSize: 13),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         ),
       ),
     );

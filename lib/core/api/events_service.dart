@@ -44,10 +44,16 @@ class EventsService {
         title: 'Neon Horizon Festival 2025',
         categoryName: 'MUSIC FESTIVAL',
         minPrice: 450000,
-        startDate: 'Friday, Dec 28, 2025 • 18:00',
-        locationName: 'SECC Exhibition Center, Quận 7',
-        description: 'Trải nghiệm âm nhạc đa giác quan Neon Horizon 2025 với hệ thống âm thanh trình diễn đỉnh cao.',
-        coverImageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCsh1MyeOrExv0OTGWPXymZBnHdDiqnLogqJTML1O6osQPpeQP11Xa069TLuCwM-qYBI6xOmazp-7pg5MCxPM4TcaDHr7rhFP7PRyR7QS79TjINZdZ4k4DfgPm1umU1TYFb7w-_8bpoVl9R1VTWzNVop69NIQAPIhcnx8LZ1FDgsJ4ME58mNas6uSxXTAiSOwUKbbgiKBdEG1KIhXlEOKa-7pEzLNe1z7_DJbEJhZKSIizd6czYP7-3',
+        startTime: DateTime.now().add(const Duration(days: 3)).toIso8601String(),
+        venue: EventVenueModel(
+          name: 'SECC Exhibition Center',
+          addressLine: '799 Nguyễn Văn Linh, Tân Phú',
+          district: 'Quận 7',
+          city: 'TP. Hồ Chí Minh',
+        ),
+        description: 'Trải nghiệm âm nhạc đa giác quan Neon Horizon 2025 với hệ thống âm thanh trình diễn đỉnh cao và sự góp mặt của hàng loạt nghệ sĩ tài năng thế giới.',
+        coverImageUrl: 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?auto=format&fit=crop&w=1200&q=80',
+        bannerUrl: 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?auto=format&fit=crop&w=1200&q=80',
         isFeatured: true,
       ),
       EventModel(
@@ -55,9 +61,16 @@ class EventsService {
         title: 'The Nocturnal Acoustic Echoes',
         categoryName: 'SAIGON INDIE NIGHTS',
         minPrice: 250000,
-        startDate: 'Fri, Jan 03 • 20:00',
-        locationName: 'Hard Rock Cafe, Bến Nghé Q1',
-        coverImageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCHvQQo3rlkT-_-4tUHI3g57mTvXFLLtgJIrPL-reMGuj3XaOw5i6m8XE6UGxWKt-QuWxbS2cGCGQjYHDt8EDrRooC6YbzU-eaPUv9DcCue5-MmAQR68oLBY_jSWFWP-C4xOAdAv4AxulL_cS5HPJAIgKYoERtOuwFAt7Adc_XIULWFK-BBSXPXfPg5aXY3f55MNtosKA6Nk4dKNOiGKA4Obe8EMj5iC0bffRUXPj_BkbYJEu63krqF',
+        startTime: DateTime.now().add(const Duration(days: 7)).toIso8601String(),
+        venue: EventVenueModel(
+          name: 'Hard Rock Cafe',
+          addressLine: '39 Lê Duẩn',
+          district: 'Quận 1',
+          city: 'TP. Hồ Chí Minh',
+        ),
+        description: 'Đêm nhạc acoustic ấm cúng cùng những giai điệu mộc mạc làm say lòng người hâm mộ indie Sài Gòn.',
+        coverImageUrl: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=1200&q=80',
+        bannerUrl: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=1200&q=80',
         isLive: true,
       ),
       EventModel(
@@ -65,9 +78,16 @@ class EventsService {
         title: 'Sub-Zero Bass Fest: Phase 2',
         categoryName: 'GLOBAL BASS COLLECTIVE',
         minPrice: 380000,
-        startDate: 'Sat, Jan 11 • 21:30',
-        locationName: 'The Warehouse 204, Thủ Đức',
-        coverImageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAXF1myZ7dVayjdjsY9cXbThsHvczZKU-JKBTR7f-4z4ZOMXjt1cIuOadRJajuvCIlvfE5TORdJAlcx5PnTyx-8HFnEKzjrG9uHtYccztPIeJD2-ZrLxKajcrT6LnALtmvbPYYOuH-Hzj7IKeqnsnQOygu58dnRikxGlxoqo45sQ7EYG1H9OZp8Tg54ngoxw5KjE_1H8bRa4QLKibNXZTd9UGUoyZzY-LK7oZGNxbr1S9NOYsVZJLMr',
+        startTime: DateTime.now().add(const Duration(days: 12)).toIso8601String(),
+        venue: EventVenueModel(
+          name: 'The Warehouse 204',
+          addressLine: 'Đường Song Hành',
+          district: 'Thủ Đức',
+          city: 'TP. Hồ Chí Minh',
+        ),
+        description: 'Âm thanh bass rung chuyển màn đêm, vũ đạo laser đỉnh cao đến từ các DJ hàng đầu.',
+        coverImageUrl: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=1200&q=80',
+        bannerUrl: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=1200&q=80',
       ),
     ];
   }
@@ -82,5 +102,26 @@ class EventsService {
       (e) => e.id == id,
       orElse: () => all.first,
     );
+  }
+
+  Future<List<EventModel>> getFavoriteEvents() async {
+    final response = await ApiClient().get(ApiConfig.favoriteEvents);
+    if (response['success'] == true && response['data'] != null) {
+      final List list = response['data'] is List ? response['data'] : [];
+      return list.map((e) => EventModel.fromJson(e)).toList();
+    }
+    return [];
+  }
+
+  Future<Map<String, dynamic>> toggleFavorite(String eventId) async {
+    final response = await ApiClient().post(ApiConfig.toggleFavorite(eventId), {});
+    if (response['success'] == true) {
+      return {
+        'success': true,
+        'isFavorited': response['data']?['is_favorited'] ?? true,
+        'message': response['message'] ?? 'Cập nhật yêu thích thành công',
+      };
+    }
+    return {'success': false, 'message': response['message'] ?? 'Không thể lưu yêu thích'};
   }
 }

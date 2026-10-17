@@ -67,16 +67,54 @@ class ApiClient {
     }
   }
 
+  Future<dynamic> put(String path, Map<String, dynamic> body) async {
+    try {
+      final uri = Uri.parse('${ApiConfig.baseUrl}$path');
+      final response = await http.put(
+        uri,
+        headers: _headers,
+        body: jsonEncode(body),
+      );
+      return _processResponse(response);
+    } catch (e) {
+      return {'success': false, 'message': 'Lỗi kết nối máy chủ: $e'};
+    }
+  }
+
+  Future<dynamic> delete(String path, {Map<String, dynamic>? body}) async {
+    try {
+      final uri = Uri.parse('${ApiConfig.baseUrl}$path');
+      final response = await http.delete(
+        uri,
+        headers: _headers,
+        body: body != null ? jsonEncode(body) : null,
+      );
+      return _processResponse(response);
+    } catch (e) {
+      return {'success': false, 'message': 'Lỗi kết nối máy chủ: $e'};
+    }
+  }
+
   dynamic _processResponse(http.Response response) {
-    final body = jsonDecode(response.body);
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      return body;
-    } else {
-      final msg = body['message'] ?? 'Thao tác không thành công (${response.statusCode})';
+    try {
+      final body = jsonDecode(utf8.decode(response.bodyBytes));
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return body;
+      } else {
+        final msg = body['message'] ?? 'Thao tác không thành công (${response.statusCode})';
+        return {
+          'success': false,
+          'message': msg,
+          'error': body['error'],
+        };
+      }
+    } catch (e) {
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return {'success': true, 'data': response.body};
+      }
       return {
         'success': false,
-        'message': msg,
-        'error': body['error'],
+        'message': 'Lỗi phản hồi máy chủ (${response.statusCode})',
       };
     }
   }

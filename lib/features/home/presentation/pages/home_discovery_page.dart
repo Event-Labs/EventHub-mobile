@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import '../../../../core/api/events_service.dart';
+import '../../../../core/api/notifications_service.dart';
 import '../../../../core/models/event_model.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../ai/presentation/pages/ai_chat_page.dart';
+import '../../../favorites/presentation/pages/favorite_events_page.dart';
+import '../../../notifications/presentation/pages/notifications_page.dart';
 import '../../../profile/presentation/pages/profile_page.dart';
 import '../../../tickets/presentation/pages/my_tickets_page.dart';
+import '../widgets/event_card.dart';
 import 'event_detail_page.dart';
 
 class HomeDiscoveryPage extends StatefulWidget {
@@ -21,34 +25,76 @@ class _HomeDiscoveryPageState extends State<HomeDiscoveryPage> {
   bool _isLoading = true;
   String _selectedCategoryId = 'all';
   final _searchController = TextEditingController();
+  int _unreadNotiCount = 0;
 
   @override
   void initState() {
     super.initState();
-    _loadData();
+    _loadInitialData();
   }
 
-  Future<void> _loadData() async {
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadInitialData() async {
     setState(() => _isLoading = true);
     final categories = await EventsService().getCategories();
+    final events = await EventsService().getPublicEvents();
+    final notiCount = await NotificationsService().getUnreadCount();
+
+    if (mounted) {
+      setState(() {
+        _categories = categories;
+        _events = events;
+        _unreadNotiCount = notiCount;
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _filterEvents() async {
+    setState(() => _isLoading = true);
     final events = await EventsService().getPublicEvents(
       search: _searchController.text.trim(),
       categoryId: _selectedCategoryId,
     );
-    setState(() {
-      _categories = categories;
-      _events = events;
-      _isLoading = false;
-    });
+    if (mounted) {
+      setState(() {
+        _events = events;
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _handleToggleFavorite(EventModel event) async {
+    final res = await EventsService().toggleFavorite(event.id);
+    if (mounted) {
+      final isFav = res['isFavorited'] ?? !event.isFavorited;
+      setState(() {
+        final idx = _events.indexWhere((e) => e.id == event.id);
+        if (idx != -1) {
+          _events[idx] = _events[idx].copyWith(isFavorited: isFav);
+        }
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(res['message'] ?? (isFav ? 'Đã thêm vào yêu thích' : 'Đã xóa khỏi yêu thích')),
+          duration: const Duration(seconds: 1),
+          backgroundColor: Colors.black87,
+        ),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Switch main view body based on Bottom NavBar tab
     Widget bodyContent;
     switch (_currentBottomNavIndex) {
       case 1:
-        bodyContent = _buildDiscoveryContent(); // Search / Explore
+        bodyContent = const FavoriteEventsPage();
         break;
       case 2:
         bodyContent = const MyTicketsPage();
@@ -66,404 +112,403 @@ class _HomeDiscoveryPageState extends State<HomeDiscoveryPage> {
     }
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: const Color(0xFF070D1E),
       body: bodyContent,
-      floatingActionButton: _currentBottomNavIndex == 0 ? _buildAiGenieFab() : null,
       bottomNavigationBar: _buildBottomNavBar(),
     );
   }
 
   Widget _buildDiscoveryContent() {
     final featured = _events.where((e) => e.isFeatured).toList();
-    final trending = _events;
+    final displayFeatured = featured.isNotEmpty ? featured : _events.take(2).toList();
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: const Color(0xFF070D1E),
       appBar: AppBar(
-        backgroundColor: AppColors.background.withOpacity(0.9),
+        backgroundColor: const Color(0xFF070D1E),
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         title: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(6),
+              padding: const EdgeInsets.all(7),
               decoration: BoxDecoration(
-                color: AppColors.primaryContainer,
-                borderRadius: BorderRadius.circular(8),
+                gradient: const LinearGradient(
+                  colors: [AppColors.primaryContainer, Color(0xFFE6C17A)],
+                ),
+                borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.local_activity, color: AppColors.onPrimary, size: 20),
+              child: const Icon(Icons.local_activity, color: Colors.white, size: 20),
             ),
-            const SizedBox(width: 8),
-            Text(
-              'EventHub',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.bold,
-                  ),
+            const SizedBox(width: 10),
+            ShaderMask(
+              shaderCallback: (bounds) => const LinearGradient(
+                colors: [Color(0xFFFFB690), Color(0xFFE6C17A)],
+              ).createShader(bounds),
+              child: const Text(
+                'EventHub',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 22,
+                  letterSpacing: -0.5,
+                ),
+              ),
             ),
           ],
         ),
         actions: [
-          _buildLocationSelector(),
-          const SizedBox(width: 8),
-          _buildNotificationBadge(),
-          const SizedBox(width: 8),
-          GestureDetector(
-            onTap: () => setState(() => _currentBottomNavIndex = 4),
-            child: const CircleAvatar(
-              radius: 16,
-              backgroundColor: AppColors.primaryContainer,
-              child: Icon(Icons.person, color: Colors.white, size: 18),
-            ),
-          ),
-          const SizedBox(width: 16),
-        ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: _loadData,
-        color: AppColors.primaryContainer,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          // Notification bell with unread badge
+          Stack(
+            alignment: Alignment.center,
             children: [
-              const SizedBox(height: 12),
-              _buildSearchBar(),
-              const SizedBox(height: 20),
-              _buildCategorySelector(),
-              const SizedBox(height: 24),
-
-              if (_isLoading)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 40),
-                  child: Center(child: CircularProgressIndicator(color: AppColors.primaryContainer)),
-                )
-              else ...[
-                if (featured.isNotEmpty) ...[
-                  _buildFeaturedCard(featured.first),
-                  const SizedBox(height: 16),
-                ],
-                _buildAiCuratorBanner(),
-                const SizedBox(height: 24),
-                _buildTrendingSectionHeader(),
-                const SizedBox(height: 16),
-                ...trending.map((event) => Padding(
-                      padding: const EdgeInsets.only(bottom: 14),
-                      child: GestureDetector(
-                        onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => EventDetailPage(event: event)),
-                          );
-                        },
-                        child: _buildTrendingEventCard(event),
-                      ),
-                    )),
-                const SizedBox(height: 100),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSearchBar() {
-    return Row(
-      children: [
-        Expanded(
-          child: Container(
-            height: 48,
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            decoration: BoxDecoration(
-              color: AppColors.surfaceContainerLow,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.outlineVariant.withOpacity(0.3)),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.search, color: AppColors.secondary, size: 20),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: TextField(
-                    controller: _searchController,
-                    style: const TextStyle(color: Colors.white),
-                    onSubmitted: (_) => _loadData(),
-                    decoration: const InputDecoration(
-                      hintText: 'Search concerts, EDM, acoustic...',
-                      hintStyle: TextStyle(color: Colors.white38, fontSize: 14),
-                      border: InputBorder.none,
-                      isDense: true,
+              IconButton(
+                icon: const Icon(Icons.notifications_none, color: Colors.white, size: 24),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const NotificationsPage()),
+                  ).then((_) async {
+                    final count = await NotificationsService().getUnreadCount();
+                    if (mounted) setState(() => _unreadNotiCount = count);
+                  });
+                },
+              ),
+              if (_unreadNotiCount > 0)
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: AppColors.primaryContainer,
+                      shape: BoxShape.circle,
+                    ),
+                    constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                    child: Text(
+                      '$_unreadNotiCount',
+                      style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                      textAlign: TextAlign.center,
                     ),
                   ),
                 ),
-              ],
-            ),
+            ],
           ),
-        ),
-        const SizedBox(width: 8),
-        GestureDetector(
-          onTap: _loadData,
-          child: Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: AppColors.surfaceContainerHigh,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(Icons.tune, color: AppColors.secondary, size: 20),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCategorySelector() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: _categories.map((cat) {
-          final isSelected = _selectedCategoryId == cat.id;
-          return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: ChoiceChip(
-              label: Text(cat.name),
-              selected: isSelected,
-              onSelected: (selected) {
-                if (selected) {
-                  setState(() => _selectedCategoryId = cat.id);
-                  _loadData();
-                }
-              },
-              selectedColor: AppColors.primaryContainer,
-              backgroundColor: AppColors.surfaceContainerLow,
-              labelStyle: TextStyle(
-                color: isSelected ? Colors.white : AppColors.secondary,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                fontSize: 12,
+          // Avatar
+          GestureDetector(
+            onTap: () => setState(() => _currentBottomNavIndex = 4),
+            child: const Padding(
+              padding: EdgeInsets.only(right: 16, left: 4),
+              child: CircleAvatar(
+                radius: 17,
+                backgroundColor: Color(0xFF1E2846),
+                child: Icon(Icons.person, color: Color(0xFFE6C17A), size: 18),
               ),
-              side: BorderSide(color: isSelected ? AppColors.primaryContainer : Colors.white12),
             ),
-          );
-        }).toList(),
+          ),
+        ],
       ),
-    );
-  }
-
-  Widget _buildFeaturedCard(EventModel event) {
-    return GestureDetector(
-      onTap: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => EventDetailPage(event: event)),
-        );
-      },
-      child: Container(
-        height: 200,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          image: DecorationImage(
-            image: NetworkImage(event.coverImageUrl ?? 'https://lh3.googleusercontent.com/aida-public/AB6AXuCsh1MyeOrExv0OTGWPXymZBnHdDiqnLogqJTML1O6osQPpeQP11Xa069TLuCwM-qYBI6xOmazp-7pg5MCxPM4TcaDHr7rhFP7PRyR7QS79TjINZdZ4k4DfgPm1umU1TYFb7w-_8bpoVl9R1VTWzNVop69NIQAPIhcnx8LZ1FDgsJ4ME58mNas6uSxXTAiSOwUKbbgiKBdEG1KIhXlEOKa-7pEzLNe1z7_DJbEJhZKSIizd6czYP7-3'),
-            fit: BoxFit.cover,
-          ),
-        ),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Colors.transparent, Colors.black.withOpacity(0.9)],
-            ),
-          ),
+      body: RefreshIndicator(
+        color: AppColors.primaryContainer,
+        backgroundColor: const Color(0xFF101932),
+        onRefresh: _loadInitialData,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.only(bottom: 30),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.end,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(color: AppColors.primaryContainer, borderRadius: BorderRadius.circular(4)),
-                child: const Text('FEATURED EVENT', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
+              // Search Input Box
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF101932),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.white.withOpacity(0.08)),
+                  ),
+                  child: TextField(
+                    controller: _searchController,
+                    style: const TextStyle(color: Colors.white, fontSize: 14),
+                    onSubmitted: (_) => _filterEvents(),
+                    decoration: InputDecoration(
+                      hintText: 'Tìm kiếm sự kiện, nghệ sĩ, địa điểm...',
+                      hintStyle: const TextStyle(color: Color(0xFF8B9CB5), fontSize: 13),
+                      prefixIcon: const Icon(Icons.search, color: Color(0xFF8B9CB5), size: 20),
+                      suffixIcon: _searchController.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear, color: Colors.white38, size: 18),
+                              onPressed: () {
+                                _searchController.clear();
+                                _filterEvents();
+                              },
+                            )
+                          : null,
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                  ),
+                ),
               ),
-              const SizedBox(height: 6),
-              Text(event.title, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
-              Text('${event.startDate} • ${event.locationName}', style: const TextStyle(color: Colors.white70, fontSize: 12)),
+
+              // Categories Horizontal Scroll
+              SizedBox(
+                height: 44,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: _categories.length,
+                  itemBuilder: (ctx, idx) {
+                    final cat = _categories[idx];
+                    final isSelected = _selectedCategoryId == cat.id;
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() => _selectedCategoryId = cat.id);
+                          _filterEvents();
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: isSelected ? AppColors.primaryContainer : const Color(0xFF101932),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: isSelected ? AppColors.primaryContainer : Colors.white.withOpacity(0.08),
+                            ),
+                          ),
+                          child: Center(
+                            child: Text(
+                              cat.name,
+                              style: TextStyle(
+                                color: isSelected ? Colors.white : const Color(0xFFDAE2FF),
+                                fontSize: 13,
+                                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              // Featured Hero Spotlight Section
+              if (displayFeatured.isNotEmpty) ...[
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16),
+                  child: Text(
+                    'Sự Kiện Nổi Bật',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: -0.2,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  height: 220,
+                  child: PageView.builder(
+                    controller: PageController(viewportFraction: 0.9),
+                    itemCount: displayFeatured.length,
+                    itemBuilder: (ctx, idx) {
+                      final item = displayFeatured[idx];
+                      return GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => EventDetailPage(event: item, eventId: item.id)),
+                          ).then((_) => _loadInitialData());
+                        },
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 6),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(22),
+                            border: Border.all(color: Colors.white.withOpacity(0.1)),
+                          ),
+                          clipBehavior: Clip.antiAlias,
+                          child: Stack(
+                            children: [
+                              Positioned.fill(
+                                child: item.coverImageUrl != null
+                                    ? Image.network(item.coverImageUrl!, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(color: const Color(0xFF1E2846)))
+                                    : Container(color: const Color(0xFF1E2846)),
+                              ),
+                              Positioned.fill(
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.bottomCenter,
+                                      colors: [
+                                        Colors.transparent,
+                                        const Color(0xFF070D1E).withOpacity(0.95),
+                                      ],
+                                      stops: const [0.4, 1.0],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              Positioned(
+                                top: 12,
+                                left: 14,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(colors: [Color(0xFFF97316), Color(0xFFE6C17A)]),
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                  child: const Text('SPOTLIGHT', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                                ),
+                              ),
+                              Positioned(
+                                bottom: 16,
+                                left: 16,
+                                right: 16,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      item.title,
+                                      style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      '${item.formattedDateTime} • ${item.locationSummary}',
+                                      style: const TextStyle(color: Color(0xFFB0CADD), fontSize: 12),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 28),
+              ],
+
+              // Events List (All / Filtered)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Tất Cả Sự Kiện',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                    Text(
+                      '${_events.length} sự kiện',
+                      style: const TextStyle(color: Color(0xFF8B9CB5), fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              if (_isLoading)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(40),
+                    child: CircularProgressIndicator(color: AppColors.primaryContainer),
+                  ),
+                )
+              else if (_events.isEmpty)
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(40),
+                    child: Column(
+                      children: [
+                        const Icon(Icons.event_busy, color: Colors.white24, size: 50),
+                        const SizedBox(height: 12),
+                        const Text('Không tìm thấy sự kiện nào.', style: TextStyle(color: Color(0xFFB0CADD), fontSize: 14)),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: _events.length,
+                  itemBuilder: (ctx, idx) {
+                    final event = _events[idx];
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: EventCardWidget(
+                        event: event,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => EventDetailPage(event: event, eventId: event.id)),
+                          ).then((_) => _loadInitialData());
+                        },
+                        onFavoriteToggle: () => _handleToggleFavorite(event),
+                      ),
+                    );
+                  },
+                ),
             ],
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildTrendingEventCard(EventModel event) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFF0C1446),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.secondary.withOpacity(0.15)),
-      ),
-      child: Row(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Image.network(
-              event.coverImageUrl ?? 'https://lh3.googleusercontent.com/aida-public/AB6AXuCHvQQo3rlkT-_-4tUHI3g57mTvXFLLtgJIrPL-reMGuj3XaOw5i6m8XE6UGxWKt-QuWxbS2cGCGQjYHDt8EDrRooC6YbzU-eaPUv9DcCue5-MmAQR68oLBY_jSWFWP-C4xOAdAv4AxulL_cS5HPJAIgKYoERtOuwFAt7Adc_XIULWFK-BBSXPXfPg5aXY3f55MNtosKA6Nk4dKNOiGKA4Obe8EMj5iC0bffRUXPj_BkbYJEu63krqF',
-              width: 80,
-              height: 80,
-              fit: BoxFit.cover,
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(event.categoryName?.toUpperCase() ?? 'CONCERT', style: const TextStyle(color: AppColors.primaryContainer, fontSize: 10, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 2),
-                Text(event.title, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis),
-                const SizedBox(height: 4),
-                Text(event.startDate ?? '', style: const TextStyle(color: AppColors.secondary, fontSize: 11)),
-                Text(event.formattedPrice, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
-              ],
-            ),
-          ),
-          const Icon(Icons.chevron_right, color: AppColors.secondary),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAiCuratorBanner() {
-    return GestureDetector(
-      onTap: () => setState(() => _currentBottomNavIndex = 3),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: const Color(0xFF0C1446),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.tertiaryContainer.withOpacity(0.3)),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: AppColors.tertiaryContainer.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(Icons.auto_awesome, color: AppColors.tertiary, size: 22),
-            ),
-            const SizedBox(width: 12),
-            const Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Gợi ý sự kiện đêm nay', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14)),
-                  Text('Hỏi Trợ lý AI Genie về show âm nhạc phù hợp gu bạn', style: TextStyle(color: AppColors.secondary, fontSize: 11)),
-                ],
-              ),
-            ),
-            const Icon(Icons.chevron_right, color: AppColors.secondary, size: 20),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTrendingSectionHeader() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Row(
-          children: [
-            const Icon(Icons.trending_up, color: AppColors.primary, size: 18),
-            const SizedBox(width: 6),
-            Text(
-              'Trending Events',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold, fontSize: 18),
-            ),
-          ],
-        ),
-        const Row(
-          children: [
-            CircleAvatar(radius: 3, backgroundColor: Colors.greenAccent),
-            SizedBox(width: 4),
-            Text('Real-time', style: TextStyle(color: AppColors.secondary, fontSize: 11)),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildLocationSelector() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceContainerHigh.withOpacity(0.8),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: const Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.near_me, color: AppColors.primaryContainer, size: 14),
-          SizedBox(width: 4),
-          Text('TP. Hồ Chí Minh', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNotificationBadge() {
-    return const Icon(Icons.notifications_none, color: AppColors.secondary, size: 24);
-  }
-
-  Widget _buildAiGenieFab() {
-    return FloatingActionButton.extended(
-      onPressed: () => setState(() => _currentBottomNavIndex = 3),
-      backgroundColor: AppColors.neonPurple,
-      icon: const Icon(Icons.auto_awesome, color: Colors.white, size: 20),
-      label: const Text('Ask Genie', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
     );
   }
 
   Widget _buildBottomNavBar() {
     return Container(
-      height: 70,
       decoration: BoxDecoration(
-        color: AppColors.surfaceContainerLowest.withOpacity(0.95),
-        border: Border(top: BorderSide(color: Colors.white.withOpacity(0.05))),
+        color: const Color(0xFF0C142A),
+        border: Border(top: BorderSide(color: Colors.white.withOpacity(0.08))),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _buildNavBarItem(0, Icons.home, 'Home'),
-          _buildNavBarItem(1, Icons.search, 'Search'),
-          _buildNavBarItem(2, Icons.confirmation_number_outlined, 'Tickets'),
-          _buildNavBarItem(3, Icons.auto_awesome, 'AI Genie'),
-          _buildNavBarItem(4, Icons.person_outline, 'Profile'),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNavBarItem(int index, IconData icon, String label) {
-    final isActive = _currentBottomNavIndex == index;
-    return GestureDetector(
-      onTap: () => setState(() => _currentBottomNavIndex = index),
-      behavior: HitTestBehavior.opaque,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: isActive ? AppColors.primaryContainer : AppColors.secondary, size: 22),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(
-              color: isActive ? AppColors.primaryContainer : AppColors.secondary,
-              fontSize: 10,
-              fontWeight: isActive ? FontWeight.bold : FontWeight.w400,
-            ),
+      child: NavigationBar(
+        selectedIndex: _currentBottomNavIndex,
+        onDestinationSelected: (idx) => setState(() => _currentBottomNavIndex = idx),
+        backgroundColor: Colors.transparent,
+        indicatorColor: AppColors.primaryContainer.withOpacity(0.2),
+        elevation: 0,
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.explore_outlined, color: Color(0xFF8B9CB5)),
+            selectedIcon: Icon(Icons.explore, color: AppColors.primaryContainer),
+            label: 'Khám phá',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.favorite_border, color: Color(0xFF8B9CB5)),
+            selectedIcon: Icon(Icons.favorite, color: Color(0xFFE6C17A)),
+            label: 'Yêu thích',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.confirmation_number_outlined, color: Color(0xFF8B9CB5)),
+            selectedIcon: Icon(Icons.confirmation_number, color: AppColors.primaryContainer),
+            label: 'Vé của tôi',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.auto_awesome_outlined, color: Color(0xFF8B9CB5)),
+            selectedIcon: Icon(Icons.auto_awesome, color: Color(0xFF06B6D4)),
+            label: 'Trợ lý AI',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.person_outline, color: Color(0xFF8B9CB5)),
+            selectedIcon: Icon(Icons.person, color: AppColors.primaryContainer),
+            label: 'Tài khoản',
           ),
         ],
       ),
