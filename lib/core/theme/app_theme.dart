@@ -4,9 +4,12 @@ import 'app_colors.dart';
 
 class AppTheme {
   static ThemeData get darkTheme {
+    final darkBase = ThemeData.dark(useMaterial3: true);
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
+      fontFamily: GoogleFonts.inter().fontFamily,
+      fontFamilyFallback: const ['Roboto', 'sans-serif'],
       colorScheme: const ColorScheme.dark(
         primary: AppColors.primary,
         onPrimary: AppColors.onPrimary,
@@ -15,57 +18,50 @@ class AppTheme {
         onSecondary: AppColors.onSecondary,
         surface: AppColors.surface,
         onSurface: AppColors.onSurface,
-        background: AppColors.background,
-        onBackground: AppColors.onSurface,
         error: AppColors.error,
         outline: AppColors.outline,
       ),
       scaffoldBackgroundColor: AppColors.background,
       textTheme: GoogleFonts.interTextTheme(
-        const TextTheme(
-          displayLarge: TextStyle(
-            fontFamily: 'Geist',
+        darkBase.textTheme.copyWith(
+          displayLarge: const TextStyle(
             fontSize: 36,
             fontWeight: FontWeight.w700,
             letterSpacing: -0.72,
           ),
-          headlineLarge: TextStyle(
-            fontFamily: 'Geist',
+          headlineLarge: const TextStyle(
             fontSize: 28,
             fontWeight: FontWeight.w700,
             letterSpacing: -0.42,
           ),
-          headlineMedium: TextStyle(
-            fontFamily: 'Geist',
+          headlineMedium: const TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.w600,
             letterSpacing: -0.24,
           ),
-          headlineSmall: TextStyle(
-            fontFamily: 'Geist',
+          headlineSmall: const TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.w600,
             letterSpacing: -0.1,
           ),
-          titleLarge: TextStyle(
-            fontFamily: 'Geist',
+          titleLarge: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w600,
           ),
-          bodyLarge: TextStyle(
+          bodyLarge: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w400,
           ),
-          bodyMedium: TextStyle(
+          bodyMedium: const TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w400,
           ),
-          labelLarge: TextStyle(
+          labelLarge: const TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w600,
             letterSpacing: 0.24,
           ),
-          labelSmall: TextStyle(
+          labelSmall: const TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.w600,
             letterSpacing: 0.44,
