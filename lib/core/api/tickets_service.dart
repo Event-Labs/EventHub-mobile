@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import '../models/ticket_model.dart';
 import 'api_client.dart';
 import 'api_config.dart';
@@ -16,11 +18,13 @@ class TicketsService {
     final response = await ApiClient().get(ApiConfig.myTickets, queryParams: queryParams);
     if (response['success'] == true && response['data'] != null) {
       final List list = response['data'] is List ? response['data'] : [];
-      return list.map((e) => TicketModel.fromJson(e)).toList();
+      final tickets = list.map((e) => TicketModel.fromJson(e)).toList();
+      _sortTickets(tickets);
+      return tickets;
     }
 
     // Fallback demonstration mock list for testing customer UI
-    return [
+    final mockList = [
       TicketModel(
         ticketId: 't-101',
         ticketCode: 'TICK-NEON-8842',
@@ -32,11 +36,15 @@ class TicketsService {
         sessionTime: DateTime.now().add(const Duration(days: 3)).toIso8601String(),
         status: 'VALID',
         price: 450000,
+        originalPrice: 500000,
         attendeeName: 'Lê Hoàng Nam',
         attendeeEmail: 'nam.le@eventhub.vn',
+        attendeePhone: '0901234567',
+        orderCode: 'ORD-882190',
         venue: TicketVenueModel(
           name: 'SECC Exhibition Center',
           addressLine: '799 Nguyễn Văn Linh',
+          ward: 'Tân Phú',
           district: 'Quận 7',
           city: 'TP. Hồ Chí Minh',
         ),
@@ -54,6 +62,8 @@ class TicketsService {
         price: 250000,
         attendeeName: 'Lê Hoàng Nam',
         attendeeEmail: 'nam.le@eventhub.vn',
+        attendeePhone: '0901234567',
+        orderCode: 'ORD-774011',
         checkInTime: DateTime.now().subtract(const Duration(days: 2, hours: 1)).toIso8601String(),
         venue: TicketVenueModel(
           name: 'Hard Rock Cafe',
@@ -63,6 +73,28 @@ class TicketsService {
         ),
       ),
     ];
+
+    if (status != null && status != 'ALL') {
+      return mockList.where((t) => t.status == status).toList();
+    }
+    return mockList;
+  }
+
+  void _sortTickets(List<TicketModel> tickets) {
+    tickets.sort((a, b) {
+      if (a.statusRank != b.statusRank) {
+        return a.statusRank.compareTo(b.statusRank);
+      }
+      final timeA = a.sessionTime != null ? DateTime.tryParse(a.sessionTime!)?.millisecondsSinceEpoch ?? 0 : 0;
+      final timeB = b.sessionTime != null ? DateTime.tryParse(b.sessionTime!)?.millisecondsSinceEpoch ?? 0 : 0;
+      if (timeA != 0 && timeB != 0) {
+        if (a.isValid) {
+          return timeA.compareTo(timeB); // Nearest upcoming first
+        }
+        return timeB.compareTo(timeA); // Most recent first for past
+      }
+      return b.ticketCode.compareTo(a.ticketCode);
+    });
   }
 
   Future<TicketModel?> getTicketDetail(String ticketId) async {
@@ -70,12 +102,47 @@ class TicketsService {
     if (response['success'] == true && response['data'] != null) {
       return TicketModel.fromJson(response['data']);
     }
-    // Fallback
+    // Fallback to local list
     final list = await getMyTickets();
     try {
       return list.firstWhere((t) => t.ticketId == ticketId);
     } catch (_) {
       return list.isNotEmpty ? list.first : null;
+    }
+  }
+
+  /// Downloads the official vector SVG ticket from backend API
+  Future<Map<String, dynamic>> downloadTicketSvg(String ticketId) async {
+    try {
+      final token = ApiClient().authToken;
+      final uri = Uri.parse('${ApiConfig.baseUrl}${ApiConfig.ticketDownload(ticketId)}');
+      final headers = <String, String>{
+        'Accept': 'image/svg+xml, application/json, text/plain, */*',
+      };
+      if (token != null && token.isNotEmpty) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+
+      final response = await http.get(uri, headers: headers);
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final svgContent = utf8.decode(response.bodyBytes);
+        return {
+          'success': true,
+          'content': svgContent,
+          'bytes': response.bodyBytes,
+          'fileName': 'ticket_$ticketId.svg',
+        };
+      }
+
+      return {
+        'success': false,
+        'message': 'Không thể tải vé từ máy chủ (${response.statusCode})',
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Lỗi kết nối khi tải vé: $e',
+      };
     }
   }
 }
