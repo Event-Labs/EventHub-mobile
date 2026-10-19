@@ -69,4 +69,5 @@ class ApiConfig {
   // AI Assistant
   static const String aiChat = '/ai-assistant/chat';
   static const String aiSessions = '/ai-assistant/sessions';
+  static String deleteAiSession(String sessionId) => '/ai-assistant/sessions/$sessionId';
 }
