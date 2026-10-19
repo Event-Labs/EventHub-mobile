@@ -8,8 +8,23 @@ import 'payment_page.dart';
 
 class TicketBookingPage extends StatefulWidget {
   final EventModel event;
+  final String? initialSessionId;
+  final String? initialTicketTypeId;
+  final int? initialQuantity;
+  final String? initialBuyerName;
+  final String? initialBuyerEmail;
+  final String? initialBuyerPhone;
 
-  const TicketBookingPage({super.key, required this.event});
+  const TicketBookingPage({
+    super.key,
+    required this.event,
+    this.initialSessionId,
+    this.initialTicketTypeId,
+    this.initialQuantity,
+    this.initialBuyerName,
+    this.initialBuyerEmail,
+    this.initialBuyerPhone,
+  });
 
   @override
   State<TicketBookingPage> createState() => _TicketBookingPageState();
@@ -37,8 +52,23 @@ class _TicketBookingPageState extends State<TicketBookingPage> {
       _phoneController.text = user.phone ?? '';
     }
 
-    // Default session
-    if (widget.event.sessions.isNotEmpty) {
+    if (widget.initialBuyerName != null && widget.initialBuyerName!.isNotEmpty) {
+      _nameController.text = widget.initialBuyerName!;
+    }
+    if (widget.initialBuyerEmail != null && widget.initialBuyerEmail!.isNotEmpty) {
+      _emailController.text = widget.initialBuyerEmail!;
+    }
+    if (widget.initialBuyerPhone != null && widget.initialBuyerPhone!.isNotEmpty) {
+      _phoneController.text = widget.initialBuyerPhone!;
+    }
+    if (widget.initialQuantity != null && widget.initialQuantity! > 0) {
+      _quantity = widget.initialQuantity!;
+    }
+
+    // Match session
+    if (widget.initialSessionId != null && widget.event.sessions.any((s) => s.id == widget.initialSessionId)) {
+      _selectedSession = widget.event.sessions.firstWhere((s) => s.id == widget.initialSessionId);
+    } else if (widget.event.sessions.isNotEmpty) {
       _selectedSession = widget.event.sessions.first;
     } else {
       _selectedSession = null;
@@ -46,7 +76,9 @@ class _TicketBookingPageState extends State<TicketBookingPage> {
 
     // Default ticket type
     final availableTypes = _getAvailableTicketTypes();
-    if (availableTypes.isNotEmpty) {
+    if (widget.initialTicketTypeId != null && availableTypes.any((t) => t.id == widget.initialTicketTypeId)) {
+      _selectedTicketType = availableTypes.firstWhere((t) => t.id == widget.initialTicketTypeId);
+    } else if (availableTypes.isNotEmpty) {
       _selectedTicketType = availableTypes.first;
     } else {
       _selectedTicketType = TicketTypeModel(
