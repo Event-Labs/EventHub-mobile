@@ -27,9 +27,10 @@ class ApiConfig {
   // Google OAuth Web Client ID (configured in backend GOOGLE_CLIENT_ID)
   static const String googleServerClientId = '872381042707-han4prvt3866lm00e9tsakad4oerhtoj.apps.googleusercontent.com';
 
-  // Events & Categories & Favorites
+  // Events & Categories & Favorites & Organizers
   static const String events = '/events';
   static const String categories = '/events/categories';
+  static const String organizers = '/events/organizers';
   static const String favoriteEvents = '/events/favorites/me';
   static String toggleFavorite(String eventId) => '/events/$eventId/favorite/toggle';
 

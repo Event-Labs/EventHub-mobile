@@ -189,34 +189,13 @@ class EventCardWidget extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   // Price row
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        event.formattedPrice,
-                        style: const TextStyle(
-                          color: Color(0xFFFFB690),
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: AppColors.primaryContainer.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppColors.primaryContainer.withOpacity(0.4)),
-                        ),
-                        child: const Text(
-                          'Đặt vé',
-                          style: TextStyle(
-                            color: AppColors.primaryContainer,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
+                  Text(
+                    event.formattedPrice,
+                    style: const TextStyle(
+                      color: Color(0xFFFFB690),
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ],
               ),

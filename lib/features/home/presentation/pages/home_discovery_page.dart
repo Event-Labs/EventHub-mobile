@@ -22,9 +22,13 @@ class _HomeDiscoveryPageState extends State<HomeDiscoveryPage> {
   int _currentBottomNavIndex = 0;
   List<EventCategoryModel> _categories = [];
   List<EventModel> _events = [];
+  List<EventOrganizerModel> _organizers = [];
   bool _isLoading = true;
   String _selectedCategoryId = 'all';
+  String? _selectedOrganizerId;
+  String _statusFilter = 'all'; // 'all', 'ongoing', 'upcoming', 'ended'
   final _searchController = TextEditingController();
+  bool _isSearching = false;
   int _unreadNotiCount = 0;
 
   @override
@@ -41,14 +45,36 @@ class _HomeDiscoveryPageState extends State<HomeDiscoveryPage> {
 
   Future<void> _loadInitialData() async {
     setState(() => _isLoading = true);
-    final categories = await EventsService().getCategories();
-    final events = await EventsService().getPublicEvents();
-    final notiCount = await NotificationsService().getUnreadCount();
+    final categoriesFuture = EventsService().getCategories();
+    final eventsFuture = EventsService().getPublicEvents(
+      search: _searchController.text.trim(),
+      categoryId: _selectedCategoryId,
+    );
+    final organizersFuture = EventsService().getOrganizers();
+    final notiCountFuture = NotificationsService().getUnreadCount();
+
+    final results = await Future.wait([categoriesFuture, eventsFuture, organizersFuture, notiCountFuture]);
+    final categories = results[0] as List<EventCategoryModel>;
+    final events = results[1] as List<EventModel>;
+    var organizers = results[2] as List<EventOrganizerModel>;
+    final notiCount = results[3] as int;
+
+    // Fallback: If organizers list from API is empty, extract unique from events
+    if (organizers.isEmpty) {
+      final Map<String, EventOrganizerModel> map = {};
+      for (final e in events) {
+        if (e.organizer?.id != null && !map.containsKey(e.organizer!.id)) {
+          map[e.organizer!.id!] = e.organizer!;
+        }
+      }
+      organizers = map.values.toList();
+    }
 
     if (mounted) {
       setState(() {
         _categories = categories;
         _events = events;
+        _organizers = organizers;
         _unreadNotiCount = notiCount;
         _isLoading = false;
       });
@@ -89,6 +115,14 @@ class _HomeDiscoveryPageState extends State<HomeDiscoveryPage> {
     }
   }
 
+  String _getEventTimeState(EventModel event, DateTime now) {
+    DateTime? start = event.startTime != null ? DateTime.tryParse(event.startTime!) : null;
+    DateTime? end = event.endTime != null ? DateTime.tryParse(event.endTime!) : null;
+    if (end != null && end.isBefore(now)) return 'ended';
+    if (start != null && start.isAfter(now)) return 'upcoming';
+    return 'ongoing';
+  }
+
   @override
   Widget build(BuildContext context) {
     Widget bodyContent;
@@ -119,8 +153,23 @@ class _HomeDiscoveryPageState extends State<HomeDiscoveryPage> {
   }
 
   Widget _buildDiscoveryContent() {
-    final featured = _events.where((e) => e.isFeatured).toList();
-    final displayFeatured = featured.isNotEmpty ? featured : _events.take(2).toList();
+    final now = DateTime.now();
+
+    // 1. Filter events by selected organizer if any
+    List<EventModel> filteredEvents = _events;
+    if (_selectedOrganizerId != null) {
+      filteredEvents = filteredEvents.where((e) => e.organizer?.id == _selectedOrganizerId).toList();
+    }
+
+    // 2. Spotlight: ONLY events that are still valid (not ended)
+    final validEvents = filteredEvents.where((e) => _getEventTimeState(e, now) != 'ended').toList();
+    final featured = validEvents.where((e) => e.isFeatured).toList();
+    final displayFeatured = featured.isNotEmpty ? featured : validEvents.take(5).toList();
+
+    // 3. Classify events by time state
+    final ongoingEvents = filteredEvents.where((e) => _getEventTimeState(e, now) == 'ongoing').toList();
+    final upcomingEvents = filteredEvents.where((e) => _getEventTimeState(e, now) == 'upcoming').toList();
+    final endedEvents = filteredEvents.where((e) => _getEventTimeState(e, now) == 'ended').toList();
 
     return Scaffold(
       backgroundColor: const Color(0xFF070D1E),
@@ -128,84 +177,106 @@ class _HomeDiscoveryPageState extends State<HomeDiscoveryPage> {
         backgroundColor: const Color(0xFF070D1E),
         surfaceTintColor: Colors.transparent,
         elevation: 0,
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(7),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [AppColors.primaryContainer, Color(0xFFE6C17A)],
+        title: _isSearching
+            ? Container(
+                height: 40,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF101932),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.white.withOpacity(0.12)),
                 ),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(Icons.local_activity, color: Colors.white, size: 20),
-            ),
-            const SizedBox(width: 10),
-            ShaderMask(
-              shaderCallback: (bounds) => const LinearGradient(
-                colors: [Color(0xFFFFB690), Color(0xFFE6C17A)],
-              ).createShader(bounds),
-              child: const Text(
-                'EventHub',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 22,
-                  letterSpacing: -0.5,
-                ),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          // Notification bell with unread badge
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.notifications_none, color: Colors.white, size: 24),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const NotificationsPage()),
-                  ).then((_) async {
-                    final count = await NotificationsService().getUnreadCount();
-                    if (mounted) setState(() => _unreadNotiCount = count);
-                  });
-                },
-              ),
-              if (_unreadNotiCount > 0)
-                Positioned(
-                  top: 8,
-                  right: 8,
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: const BoxDecoration(
-                      color: AppColors.primaryContainer,
-                      shape: BoxShape.circle,
-                    ),
-                    constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-                    child: Text(
-                      '$_unreadNotiCount',
-                      style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                      textAlign: TextAlign.center,
-                    ),
+                child: TextField(
+                  controller: _searchController,
+                  autofocus: true,
+                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                  textInputAction: TextInputAction.search,
+                  onSubmitted: (_) => _filterEvents(),
+                  decoration: InputDecoration(
+                    hintText: 'Tìm kiếm sự kiện, nghệ sĩ...',
+                    hintStyle: const TextStyle(color: Color(0xFF8B9CB5), fontSize: 13),
+                    prefixIcon: const Icon(Icons.search, color: Color(0xFF8B9CB5), size: 18),
+                    suffixIcon: _searchController.text.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear, color: Colors.white54, size: 16),
+                            onPressed: () {
+                              _searchController.clear();
+                              _filterEvents();
+                            },
+                          )
+                        : null,
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 10),
                   ),
                 ),
-            ],
-          ),
-          // Avatar
-          GestureDetector(
-            onTap: () => setState(() => _currentBottomNavIndex = 4),
-            child: const Padding(
-              padding: EdgeInsets.only(right: 16, left: 4),
-              child: CircleAvatar(
-                radius: 17,
-                backgroundColor: Color(0xFF1E2846),
-                child: Icon(Icons.person, color: Color(0xFFE6C17A), size: 18),
+              )
+            : ShaderMask(
+                shaderCallback: (bounds) => const LinearGradient(
+                  colors: [Color(0xFFFFB690), Color(0xFFE6C17A)],
+                ).createShader(bounds),
+                child: const Text(
+                  'EventHub',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 24,
+                    letterSpacing: -0.5,
+                  ),
+                ),
               ),
+        actions: [
+          if (_isSearching)
+            IconButton(
+              icon: const Icon(Icons.close, color: Colors.white, size: 22),
+              onPressed: () {
+                _searchController.clear();
+                setState(() => _isSearching = false);
+                _filterEvents();
+              },
+            )
+          else ...[
+            // Icon kính lúp tìm kiếm
+            IconButton(
+              icon: const Icon(Icons.search, color: Colors.white, size: 24),
+              onPressed: () => setState(() => _isSearching = true),
             ),
-          ),
+            // Icon chuông thông báo
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.notifications_none, color: Colors.white, size: 24),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const NotificationsPage()),
+                    ).then((_) async {
+                      final count = await NotificationsService().getUnreadCount();
+                      if (mounted) setState(() => _unreadNotiCount = count);
+                    });
+                  },
+                ),
+                if (_unreadNotiCount > 0)
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(
+                        color: AppColors.primaryContainer,
+                        shape: BoxShape.circle,
+                      ),
+                      constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                      child: Text(
+                        '$_unreadNotiCount',
+                        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(width: 8),
+          ],
         ],
       ),
       body: RefreshIndicator(
@@ -217,96 +288,78 @@ class _HomeDiscoveryPageState extends State<HomeDiscoveryPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Search Input Box
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF101932),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.white.withOpacity(0.08)),
-                  ),
-                  child: TextField(
-                    controller: _searchController,
-                    style: const TextStyle(color: Colors.white, fontSize: 14),
-                    onSubmitted: (_) => _filterEvents(),
-                    decoration: InputDecoration(
-                      hintText: 'Tìm kiếm sự kiện, nghệ sĩ, địa điểm...',
-                      hintStyle: const TextStyle(color: Color(0xFF8B9CB5), fontSize: 13),
-                      prefixIcon: const Icon(Icons.search, color: Color(0xFF8B9CB5), size: 20),
-                      suffixIcon: _searchController.text.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(Icons.clear, color: Colors.white38, size: 18),
-                              onPressed: () {
-                                _searchController.clear();
-                                _filterEvents();
-                              },
-                            )
-                          : null,
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                  ),
-                ),
-              ),
+              const SizedBox(height: 8),
 
               // Categories Horizontal Scroll
-              SizedBox(
-                height: 44,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: _categories.length,
-                  itemBuilder: (ctx, idx) {
-                    final cat = _categories[idx];
-                    final isSelected = _selectedCategoryId == cat.id;
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: GestureDetector(
-                        onTap: () {
-                          setState(() => _selectedCategoryId = cat.id);
-                          _filterEvents();
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: isSelected ? AppColors.primaryContainer : const Color(0xFF101932),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: isSelected ? AppColors.primaryContainer : Colors.white.withOpacity(0.08),
+              if (_categories.isNotEmpty) ...[
+                SizedBox(
+                  height: 40,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: _categories.length,
+                    itemBuilder: (ctx, idx) {
+                      final cat = _categories[idx];
+                      final isSelected = _selectedCategoryId == cat.id;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              if (_selectedCategoryId == cat.id && cat.id != 'all') {
+                                _selectedCategoryId = 'all';
+                              } else {
+                                _selectedCategoryId = cat.id;
+                              }
+                            });
+                            _filterEvents();
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: isSelected ? AppColors.primaryContainer : const Color(0xFF101932),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: isSelected ? AppColors.primaryContainer : Colors.white.withOpacity(0.08),
+                              ),
                             ),
-                          ),
-                          child: Center(
-                            child: Text(
-                              cat.name,
-                              style: TextStyle(
-                                color: isSelected ? Colors.white : const Color(0xFFDAE2FF),
-                                fontSize: 13,
-                                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                            child: Center(
+                              child: Text(
+                                cat.name,
+                                style: TextStyle(
+                                  color: isSelected ? Colors.white : const Color(0xFFDAE2FF),
+                                  fontSize: 13,
+                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                    );
-                  },
+                      );
+                    },
+                  ),
                 ),
-              ),
+                const SizedBox(height: 20),
+              ],
 
-              const SizedBox(height: 24),
-
-              // Featured Hero Spotlight Section
+              // 1. Featured Spotlight Section (Only active events)
               if (displayFeatured.isNotEmpty) ...[
                 const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 16),
-                  child: Text(
-                    'Sự Kiện Nổi Bật',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: -0.2,
-                    ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.bolt, color: Color(0xFFE6C17A), size: 20),
+                      SizedBox(width: 6),
+                      Text(
+                        'Sự Kiện Nổi Bật',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -395,33 +448,151 @@ class _HomeDiscoveryPageState extends State<HomeDiscoveryPage> {
                     },
                   ),
                 ),
-                const SizedBox(height: 28),
+                const SizedBox(height: 24),
               ],
 
-              // Events List (All / Filtered)
+              // 2. Featured Organizers Section (Avatar + Tên BTC)
+              if (_organizers.isNotEmpty) ...[
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(Icons.stars, color: Color(0xFFE6C17A), size: 18),
+                          SizedBox(width: 6),
+                          Text(
+                            'Ban Tổ Chức Nổi Bật',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: -0.2,
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (_selectedOrganizerId != null)
+                        GestureDetector(
+                          onTap: () => setState(() => _selectedOrganizerId = null),
+                          child: const Text(
+                            'Bỏ lọc',
+                            style: TextStyle(
+                              color: AppColors.primaryContainer,
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  height: 106,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: _organizers.length,
+                    itemBuilder: (ctx, idx) {
+                      final org = _organizers[idx];
+                      final isSelected = _selectedOrganizerId == org.id;
+                      final name = org.displayName;
+
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 14),
+                        child: GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              if (_selectedOrganizerId == org.id) {
+                                _selectedOrganizerId = null;
+                              } else {
+                                _selectedOrganizerId = org.id;
+                              }
+                            });
+                          },
+                          child: SizedBox(
+                            width: 76,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 60,
+                                  height: 60,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: const Color(0xFF1E2846),
+                                    border: Border.all(
+                                      color: isSelected
+                                          ? AppColors.primaryContainer
+                                          : const Color(0xFFE6C17A).withOpacity(0.4),
+                                      width: isSelected ? 2.5 : 1.5,
+                                    ),
+                                    boxShadow: isSelected
+                                        ? [
+                                            BoxShadow(
+                                              color: AppColors.primaryContainer.withOpacity(0.4),
+                                              blurRadius: 10,
+                                              spreadRadius: 1,
+                                            ),
+                                          ]
+                                        : null,
+                                  ),
+                                  clipBehavior: Clip.antiAlias,
+                                  child: org.avatarUrl != null && org.avatarUrl!.isNotEmpty
+                                      ? Image.network(
+                                          org.avatarUrl!,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (_, __, ___) => _buildOrganizerFallback(name),
+                                        )
+                                      : _buildOrganizerFallback(name),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  name,
+                                  maxLines: 2,
+                                  textAlign: TextAlign.center,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: isSelected ? AppColors.primaryContainer : const Color(0xFFDAE2FF),
+                                    fontSize: 11,
+                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                    height: 1.15,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 20),
+              ],
+
+              // 3. Status Tabs (Tất cả, Đang diễn ra, Sắp diễn ra, Đã kết thúc)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Tất Cả Sự Kiện',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: -0.2,
-                      ),
-                    ),
-                    Text(
-                      '${_events.length} sự kiện',
-                      style: const TextStyle(color: Color(0xFF8B9CB5), fontSize: 12),
-                    ),
-                  ],
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _buildStatusPill('all', 'Tất cả (${filteredEvents.length})', null),
+                      const SizedBox(width: 8),
+                      _buildStatusPill('ongoing', 'Đang diễn ra (${ongoingEvents.length})', const Color(0xFF10B981)),
+                      const SizedBox(width: 8),
+                      _buildStatusPill('upcoming', 'Sắp diễn ra (${upcomingEvents.length})', const Color(0xFF06B6D4)),
+                      const SizedBox(width: 8),
+                      _buildStatusPill('ended', 'Đã kết thúc (${endedEvents.length})', const Color(0xFF94A3B8)),
+                    ],
+                  ),
                 ),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 16),
 
+              // Events List Display
               if (_isLoading)
                 const Center(
                   child: Padding(
@@ -429,7 +600,7 @@ class _HomeDiscoveryPageState extends State<HomeDiscoveryPage> {
                     child: CircularProgressIndicator(color: AppColors.primaryContainer),
                   ),
                 )
-              else if (_events.isEmpty)
+              else if (filteredEvents.isEmpty)
                 Center(
                   child: Padding(
                     padding: const EdgeInsets.all(40),
@@ -438,37 +609,203 @@ class _HomeDiscoveryPageState extends State<HomeDiscoveryPage> {
                         const Icon(Icons.event_busy, color: Colors.white24, size: 50),
                         const SizedBox(height: 12),
                         const Text('Không tìm thấy sự kiện nào.', style: TextStyle(color: Color(0xFFB0CADD), fontSize: 14)),
+                        if (_selectedOrganizerId != null) ...[
+                          const SizedBox(height: 8),
+                          TextButton(
+                            onPressed: () => setState(() => _selectedOrganizerId = null),
+                            child: const Text('Xem tất cả ban tổ chức'),
+                          ),
+                        ],
                       ],
                     ),
                   ),
                 )
               else
-                ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: _events.length,
-                  itemBuilder: (ctx, idx) {
-                    final event = _events[idx];
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 16),
-                      child: EventCardWidget(
-                        event: event,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => EventDetailPage(event: event, eventId: event.id)),
-                          ).then((_) => _loadInitialData());
-                        },
-                        onFavoriteToggle: () => _handleToggleFavorite(event),
-                      ),
-                    );
-                  },
+                ..._buildCategorizedEventsList(
+                  ongoingEvents: ongoingEvents,
+                  upcomingEvents: upcomingEvents,
+                  endedEvents: endedEvents,
+                  allEvents: filteredEvents,
                 ),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildOrganizerFallback(String name) {
+    final initial = name.isNotEmpty ? name.trim().characters.first.toUpperCase() : 'B';
+    return Center(
+      child: Text(
+        initial,
+        style: const TextStyle(
+          color: Color(0xFFE6C17A),
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusPill(String filterKey, String label, Color? indicatorColor) {
+    final isSelected = _statusFilter == filterKey;
+    return GestureDetector(
+      onTap: () => setState(() => _statusFilter = filterKey),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primaryContainer.withOpacity(0.2) : const Color(0xFF101932),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: isSelected ? AppColors.primaryContainer : Colors.white.withOpacity(0.08),
+            width: isSelected ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (indicatorColor != null) ...[
+              Container(
+                width: 7,
+                height: 7,
+                decoration: BoxDecoration(color: indicatorColor, shape: BoxShape.circle),
+              ),
+              const SizedBox(width: 6),
+            ],
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? Colors.white : const Color(0xFFB0CADD),
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _buildCategorizedEventsList({
+    required List<EventModel> ongoingEvents,
+    required List<EventModel> upcomingEvents,
+    required List<EventModel> endedEvents,
+    required List<EventModel> allEvents,
+  }) {
+    if (_statusFilter == 'ongoing') {
+      return [
+        _buildSectionHeader('Đang Diễn Ra', ongoingEvents.length, const Color(0xFF10B981)),
+        _buildEventsColumn(ongoingEvents, emptyMessage: 'Không có sự kiện nào đang diễn ra.'),
+      ];
+    }
+    if (_statusFilter == 'upcoming') {
+      return [
+        _buildSectionHeader('Sắp Diễn Ra', upcomingEvents.length, const Color(0xFF06B6D4)),
+        _buildEventsColumn(upcomingEvents, emptyMessage: 'Không có sự kiện nào sắp diễn ra.'),
+      ];
+    }
+    if (_statusFilter == 'ended') {
+      return [
+        _buildSectionHeader('Đã Kết Thúc', endedEvents.length, const Color(0xFF94A3B8)),
+        _buildEventsColumn(endedEvents, emptyMessage: 'Không có sự kiện nào đã kết thúc.'),
+      ];
+    }
+
+    // Default 'all': Display categorized sections in order
+    final widgets = <Widget>[];
+
+    if (ongoingEvents.isNotEmpty) {
+      widgets.add(_buildSectionHeader('Đang Diễn Ra', ongoingEvents.length, const Color(0xFF10B981)));
+      widgets.add(_buildEventsColumn(ongoingEvents));
+      widgets.add(const SizedBox(height: 14));
+    }
+
+    if (upcomingEvents.isNotEmpty) {
+      widgets.add(_buildSectionHeader('Sắp Diễn Ra', upcomingEvents.length, const Color(0xFF06B6D4)));
+      widgets.add(_buildEventsColumn(upcomingEvents));
+      widgets.add(const SizedBox(height: 14));
+    }
+
+    if (endedEvents.isNotEmpty) {
+      widgets.add(_buildSectionHeader('Đã Kết Thúc', endedEvents.length, const Color(0xFF94A3B8)));
+      widgets.add(_buildEventsColumn(endedEvents));
+    }
+
+    return widgets;
+  }
+
+  Widget _buildSectionHeader(String title, int count, Color accentColor) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 4,
+                height: 18,
+                decoration: BoxDecoration(
+                  color: accentColor,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: -0.2,
+                ),
+              ),
+            ],
+          ),
+          Text(
+            '$count sự kiện',
+            style: const TextStyle(color: Color(0xFF8B9CB5), fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEventsColumn(List<EventModel> events, {String emptyMessage = 'Không có sự kiện nào.'}) {
+    if (events.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        child: Center(
+          child: Text(
+            emptyMessage,
+            style: const TextStyle(color: Color(0xFF8B9CB5), fontSize: 13),
+          ),
+        ),
+      );
+    }
+
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      itemCount: events.length,
+      itemBuilder: (ctx, idx) {
+        final event = events[idx];
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: EventCardWidget(
+            event: event,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => EventDetailPage(event: event, eventId: event.id)),
+              ).then((_) => _loadInitialData());
+            },
+            onFavoriteToggle: () => _handleToggleFavorite(event),
+          ),
+        );
+      },
     );
   }
 
