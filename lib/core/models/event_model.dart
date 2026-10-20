@@ -137,7 +137,7 @@ class TicketTypeModel {
           : (json['quantity'] != null ? int.tryParse(json['quantity'].toString()) ?? 0 : 0),
       saleStart: json['sale_start']?.toString(),
       saleEnd: json['sale_end']?.toString(),
-      sessionId: json['session_id']?.toString(),
+      sessionId: json['session_id']?.toString() ?? json['event_session_id']?.toString(),
     );
   }
 
@@ -170,7 +170,7 @@ class EventSessionModel {
   factory EventSessionModel.fromJson(Map<String, dynamic> json) {
     return EventSessionModel(
       id: json['id']?.toString() ?? '',
-      name: json['name']?.toString() ?? json['title']?.toString(),
+      name: json['session_name']?.toString() ?? json['name']?.toString() ?? json['title']?.toString(),
       startTime: json['start_time']?.toString() ?? json['startDate']?.toString(),
       endTime: json['end_time']?.toString() ?? json['endDate']?.toString(),
       venue: json['venue'] != null ? EventVenueModel.fromJson(json['venue']) : null,
@@ -183,8 +183,10 @@ class EventSessionModel {
   String get formattedTime {
     if (startTime == null) return 'Sắp diễn ra';
     try {
-      final date = DateTime.parse(startTime!);
-      return DateFormat('HH:mm - dd/MM/yyyy').format(date);
+      final date = DateTime.parse(startTime!).toLocal();
+      final time = DateFormat('HH:mm').format(date);
+      final dateStr = DateFormat('dd/MM/yyyy').format(date);
+      return '$time - $dateStr';
     } catch (_) {
       return startTime!;
     }
@@ -268,7 +270,7 @@ class EventModel {
       organizerModel = EventOrganizerModel(fullName: json['organizer_name']?.toString());
     }
 
-    // Extract Sessions
+    // Extract Sessions & associate ticket types
     List<EventSessionModel> sessionsList = [];
     if (json['sessions'] is List) {
       sessionsList = (json['sessions'] as List).map((s) => EventSessionModel.fromJson(s)).toList();
@@ -278,6 +280,24 @@ class EventModel {
     List<TicketTypeModel> ticketTypesList = [];
     if (json['ticket_types'] is List) {
       ticketTypesList = (json['ticket_types'] as List).map((t) => TicketTypeModel.fromJson(t)).toList();
+    }
+
+    // Distribute tickets to sessions if session tickets are empty
+    if (sessionsList.isNotEmpty && ticketTypesList.isNotEmpty) {
+      sessionsList = sessionsList.map((session) {
+        if (session.ticketTypes.isEmpty) {
+          final matched = ticketTypesList.where((t) => t.sessionId == session.id).toList();
+          return EventSessionModel(
+            id: session.id,
+            name: session.name,
+            startTime: session.startTime,
+            endTime: session.endTime,
+            venue: session.venue ?? venueModel,
+            ticketTypes: matched.isNotEmpty ? matched : ticketTypesList,
+          );
+        }
+        return session;
+      }).toList();
     }
 
     // Min and Max prices
@@ -297,6 +317,18 @@ class EventModel {
 
     final sTime = json['start_time']?.toString() ?? json['start_date']?.toString() ?? json['startDate']?.toString();
     final eTime = json['end_time']?.toString() ?? json['end_date']?.toString() ?? json['endDate']?.toString();
+
+    String? parsedRefundPolicy;
+    if (json['refund_policy'] is Map) {
+      final rp = json['refund_policy'];
+      if (rp['allow_refunds'] == true) {
+        parsedRefundPolicy = 'Hỗ trợ hoàn trả vé trước thời điểm diễn ra sự kiện ${rp['deadline_days'] ?? 14} ngày.';
+      } else {
+        parsedRefundPolicy = 'Sự kiện không hỗ trợ hoàn hoặc hủy vé sau khi thanh toán thành công.';
+      }
+    } else if (json['refund_policy'] != null) {
+      parsedRefundPolicy = json['refund_policy'].toString();
+    }
 
     return EventModel(
       id: json['id']?.toString() ?? '',
@@ -319,7 +351,7 @@ class EventModel {
       isFavorited: json['is_favorited'] == true,
       isFeatured: json['is_featured'] == true || json['featured'] == true,
       isLive: json['status'] == 'ONGOING' || json['is_live'] == true,
-      refundPolicy: json['refund_policy']?.toString(),
+      refundPolicy: parsedRefundPolicy,
       additionalTerms: json['additional_terms']?.toString(),
     );
   }
@@ -367,8 +399,15 @@ class EventModel {
   String get formattedDateTime {
     if (startTime == null) return 'Sắp cập nhật';
     try {
-      final date = DateTime.parse(startTime!);
-      return DateFormat('dd/MM/yyyy • HH:mm').format(date);
+      final date = DateTime.parse(startTime!).toLocal();
+      const weekdays = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'CN'];
+      final weekday = weekdays[(date.weekday >= 1 && date.weekday <= 7) ? date.weekday - 1 : 0];
+      final day = date.day.toString().padLeft(2, '0');
+      final month = date.month.toString().padLeft(2, '0');
+      final year = date.year;
+      final hour = date.hour.toString().padLeft(2, '0');
+      final minute = date.minute.toString().padLeft(2, '0');
+      return '$weekday, $day/$month/$year • $hour:$minute';
     } catch (_) {
       return startTime!;
     }
