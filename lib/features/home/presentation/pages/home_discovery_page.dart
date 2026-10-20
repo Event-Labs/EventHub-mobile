@@ -10,6 +10,7 @@ import '../../../profile/presentation/pages/profile_page.dart';
 import '../../../tickets/presentation/pages/my_tickets_page.dart';
 import '../widgets/event_card.dart';
 import 'event_detail_page.dart';
+import 'search_events_page.dart';
 
 class HomeDiscoveryPage extends StatefulWidget {
   const HomeDiscoveryPage({super.key});
@@ -28,7 +29,6 @@ class _HomeDiscoveryPageState extends State<HomeDiscoveryPage> {
   String? _selectedOrganizerId;
   String _statusFilter = 'all'; // 'all', 'ongoing', 'upcoming', 'ended'
   final _searchController = TextEditingController();
-  bool _isSearching = false;
   int _unreadNotiCount = 0;
 
   @override
@@ -177,84 +177,47 @@ class _HomeDiscoveryPageState extends State<HomeDiscoveryPage> {
         backgroundColor: const Color(0xFF070D1E),
         surfaceTintColor: Colors.transparent,
         elevation: 0,
-        title: _isSearching
-            ? Container(
-                height: 40,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF101932),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.white.withOpacity(0.12)),
-                ),
-                child: TextField(
-                  controller: _searchController,
-                  autofocus: true,
-                  style: const TextStyle(color: Colors.white, fontSize: 14),
-                  textInputAction: TextInputAction.search,
-                  onSubmitted: (_) => _filterEvents(),
-                  decoration: InputDecoration(
-                    hintText: 'Tìm kiếm sự kiện, nghệ sĩ...',
-                    hintStyle: const TextStyle(color: Color(0xFF8B9CB5), fontSize: 13),
-                    prefixIcon: const Icon(Icons.search, color: Color(0xFF8B9CB5), size: 18),
-                    suffixIcon: _searchController.text.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear, color: Colors.white54, size: 16),
-                            onPressed: () {
-                              _searchController.clear();
-                              _filterEvents();
-                            },
-                          )
-                        : null,
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 10),
-                  ),
-                ),
-              )
-            : ShaderMask(
-                shaderCallback: (bounds) => const LinearGradient(
-                  colors: [Color(0xFFFFB690), Color(0xFFE6C17A)],
-                ).createShader(bounds),
-                child: const Text(
-                  'EventHub',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 24,
-                    letterSpacing: -0.5,
-                  ),
-                ),
-              ),
-        actions: [
-          if (_isSearching)
-            IconButton(
-              icon: const Icon(Icons.close, color: Colors.white, size: 22),
-              onPressed: () {
-                _searchController.clear();
-                setState(() => _isSearching = false);
-                _filterEvents();
-              },
-            )
-          else ...[
-            // Icon kính lúp tìm kiếm
-            IconButton(
-              icon: const Icon(Icons.search, color: Colors.white, size: 24),
-              onPressed: () => setState(() => _isSearching = true),
+        title: ShaderMask(
+          shaderCallback: (bounds) => const LinearGradient(
+            colors: [Color(0xFFFFB690), Color(0xFFE6C17A)],
+          ).createShader(bounds),
+          child: const Text(
+            'EventHub',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+              fontSize: 24,
+              letterSpacing: -0.5,
             ),
-            // Icon chuông thông báo
-            Stack(
-              alignment: Alignment.center,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.notifications_none, color: Colors.white, size: 24),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const NotificationsPage()),
-                    ).then((_) async {
-                      final count = await NotificationsService().getUnreadCount();
-                      if (mounted) setState(() => _unreadNotiCount = count);
-                    });
-                  },
-                ),
+          ),
+        ),
+        actions: [
+          // Icon kính lúp tìm kiếm
+          IconButton(
+            icon: const Icon(Icons.search, color: Colors.white, size: 24),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SearchEventsPage()),
+              );
+            },
+          ),
+          // Icon chuông thông báo
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.notifications_none, color: Colors.white, size: 24),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const NotificationsPage()),
+                  ).then((_) async {
+                    final count = await NotificationsService().getUnreadCount();
+                    if (mounted) setState(() => _unreadNotiCount = count);
+                  });
+                },
+              ),
                 if (_unreadNotiCount > 0)
                   Positioned(
                     top: 8,
@@ -277,8 +240,7 @@ class _HomeDiscoveryPageState extends State<HomeDiscoveryPage> {
             ),
             const SizedBox(width: 8),
           ],
-        ],
-      ),
+        ),
       body: RefreshIndicator(
         color: AppColors.primaryContainer,
         backgroundColor: const Color(0xFF101932),
