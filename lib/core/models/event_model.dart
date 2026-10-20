@@ -216,6 +216,83 @@ class EventModel {
   final bool isLive;
   final String? refundPolicy;
   final String? additionalTerms;
+  final Map<String, dynamic>? refundPolicyData;
+  final String? policyFileUrl;
+  final String? policyFileName;
+  final int? policyFileSize;
+  final bool? _requireAttendeeInfo;
+  bool get requireAttendeeInfo => _requireAttendeeInfo == true;
+
+  bool get allowRefunds {
+    if (refundPolicyData != null) {
+      return refundPolicyData!['allow_refund'] == true ||
+          refundPolicyData!['allow_refunds'] == true;
+    }
+    return false;
+  }
+
+  bool get hasRefundPolicy => allowRefunds;
+
+  List<String> get refundPolicyLines {
+    if (refundPolicyData == null) {
+      if (refundPolicy != null && refundPolicy!.trim().isNotEmpty) {
+        return [refundPolicy!.trim()];
+      }
+      return ['Vé không hỗ trợ hoàn hủy theo chính sách của sự kiện.'];
+    }
+
+    final isAllowed = allowRefunds;
+    if (!isAllowed) {
+      return ['Vé không hỗ trợ hoàn hủy theo chính sách của sự kiện.'];
+    }
+
+    final rawRules = refundPolicyData!['refund_rules'];
+    if (rawRules is! List || rawRules.isEmpty) {
+      if (refundPolicy != null && refundPolicy!.trim().isNotEmpty) {
+        return [refundPolicy!.trim()];
+      }
+      return ['Vé không hỗ trợ hoàn hủy.'];
+    }
+
+    final List<Map<String, dynamic>> rules = [];
+    for (final r in rawRules) {
+      if (r is Map) {
+        rules.add(Map<String, dynamic>.from(r));
+      }
+    }
+
+    rules.sort((a, b) {
+      final daysA = int.tryParse(a['days_before']?.toString() ?? '0') ?? 0;
+      final daysB = int.tryParse(b['days_before']?.toString() ?? '0') ?? 0;
+      return daysB.compareTo(daysA);
+    });
+
+    final List<String> lines = [];
+    for (int i = 0; i < rules.length; i++) {
+      final current = rules[i];
+      final days = current['days_before'];
+      final rate = current['refund_rate'];
+      if (i == 0) {
+        lines.add('Hoàn $rate% số tiền đã thanh toán nếu yêu cầu trước sự kiện ít nhất $days ngày.');
+      } else {
+        final prev = rules[i - 1];
+        final prevDays = prev['days_before'];
+        lines.add('Hoàn $rate% số tiền đã thanh toán nếu yêu cầu trước sự kiện từ $days đến dưới $prevDays ngày.');
+      }
+    }
+
+    final minDays = int.tryParse(rules.last['days_before']?.toString() ?? '0') ?? 0;
+    if (minDays > 0) {
+      lines.add('Không hỗ trợ hoàn tiền nếu yêu cầu trong vòng $minDays ngày trước sự kiện.');
+    }
+
+    final notes = refundPolicyData!['refund_notes']?.toString();
+    if (notes != null && notes.trim().isNotEmpty) {
+      lines.add('* Lưu ý từ BTC: ${notes.trim()}');
+    }
+
+    return lines;
+  }
 
   EventModel({
     required this.id,
@@ -240,7 +317,12 @@ class EventModel {
     this.isLive = false,
     this.refundPolicy,
     this.additionalTerms,
-  });
+    this.refundPolicyData,
+    this.policyFileUrl,
+    this.policyFileName,
+    this.policyFileSize,
+    bool? requireAttendeeInfo,
+  }) : _requireAttendeeInfo = requireAttendeeInfo ?? false;
 
   factory EventModel.fromJson(Map<String, dynamic> json) {
     // Extract Category
@@ -319,16 +401,28 @@ class EventModel {
     final eTime = json['end_time']?.toString() ?? json['end_date']?.toString() ?? json['endDate']?.toString();
 
     String? parsedRefundPolicy;
+    Map<String, dynamic>? rpMap;
     if (json['refund_policy'] is Map) {
-      final rp = json['refund_policy'];
-      if (rp['allow_refunds'] == true) {
-        parsedRefundPolicy = 'Hỗ trợ hoàn trả vé trước thời điểm diễn ra sự kiện ${rp['deadline_days'] ?? 14} ngày.';
+      rpMap = Map<String, dynamic>.from(json['refund_policy']);
+      if (rpMap['allow_refunds'] == true || rpMap['allow_refund'] == true) {
+        parsedRefundPolicy = 'Hỗ trợ hoàn trả vé trước thời điểm diễn ra sự kiện ${rpMap['deadline_days'] ?? 14} ngày.';
       } else {
         parsedRefundPolicy = 'Sự kiện không hỗ trợ hoàn hoặc hủy vé sau khi thanh toán thành công.';
       }
     } else if (json['refund_policy'] != null) {
       parsedRefundPolicy = json['refund_policy'].toString();
     }
+
+    final policyUrl = json['policy_file_url']?.toString() ??
+        rpMap?['policy_file_url']?.toString();
+    final policyName = json['policy_file_name']?.toString() ??
+        rpMap?['policy_file_name']?.toString() ??
+        'Tài liệu chính sách sự kiện';
+    final policySize = json['policy_file_size'] != null
+        ? int.tryParse(json['policy_file_size'].toString())
+        : (rpMap?['policy_file_size'] != null
+            ? int.tryParse(rpMap!['policy_file_size'].toString())
+            : null);
 
     return EventModel(
       id: json['id']?.toString() ?? '',
@@ -353,11 +447,17 @@ class EventModel {
       isLive: json['status'] == 'ONGOING' || json['is_live'] == true,
       refundPolicy: parsedRefundPolicy,
       additionalTerms: json['additional_terms']?.toString(),
+      refundPolicyData: rpMap,
+      policyFileUrl: policyUrl,
+      policyFileName: policyName,
+      policyFileSize: policySize,
+      requireAttendeeInfo: json['require_attendee_info'] == true,
     );
   }
 
   EventModel copyWith({
     bool? isFavorited,
+    bool? requireAttendeeInfo,
   }) {
     return EventModel(
       id: id,
@@ -382,6 +482,7 @@ class EventModel {
       isLive: isLive,
       refundPolicy: refundPolicy,
       additionalTerms: additionalTerms,
+      requireAttendeeInfo: requireAttendeeInfo ?? this.requireAttendeeInfo,
     );
   }
 

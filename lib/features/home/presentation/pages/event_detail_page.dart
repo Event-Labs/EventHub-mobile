@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../../core/api/auth_service.dart';
 import '../../../../core/api/events_service.dart';
 import '../../../../core/models/event_model.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -211,12 +212,22 @@ class _EventDetailPageState extends State<EventDetailPage> {
       return;
     }
 
+    String? sessionId = _selectedSessionId;
+    if (sessionId == null && event.sessions.isNotEmpty) {
+      final validSession = event.sessions.firstWhere((s) => !_isSessionExpired(s), orElse: () => event.sessions.first);
+      sessionId = validSession.id;
+    }
+
+    final user = AuthService().currentUser;
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => TicketBookingPage(
           event: event,
-          initialSessionId: _selectedSessionId,
+          initialSessionId: sessionId,
+          initialBuyerName: user?.fullName,
+          initialBuyerEmail: user?.email,
+          initialBuyerPhone: user?.phone,
         ),
       ),
     );
