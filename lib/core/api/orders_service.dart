@@ -108,4 +108,14 @@ class OrdersService {
       'message': response['message'] ?? 'Không thể hủy đơn hàng',
     };
   }
+
+  Future<List<Map<String, dynamic>>> getAvailablePromotions(String eventId) async {
+    try {
+      final response = await ApiClient().get(ApiConfig.availablePromotions(eventId));
+      if (response['success'] == true && response['data'] is List) {
+        return List<Map<String, dynamic>>.from(response['data']);
+      }
+    } catch (_) {}
+    return [];
+  }
 }

@@ -39,6 +39,7 @@ class ApiConfig {
   static const String checkout = '/orders/checkout';
   static String orderStatus(String orderId) => '/orders/$orderId/status';
   static String cancelOrder(String orderId) => '/orders/$orderId/cancel';
+  static String availablePromotions(String eventId) => '/promotions/public/events/$eventId/available';
 
   // Tickets
   static const String myTickets = '/tickets/me';

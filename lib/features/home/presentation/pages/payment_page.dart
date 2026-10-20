@@ -186,7 +186,8 @@ class _PaymentPageState extends State<PaymentPage> {
       appBar: AppBar(
         backgroundColor: const Color(0xFF070D1E),
         elevation: 0,
-        title: const Text('Thanh Toán PayOS', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: const Text('Thanh Toán Đơn Hàng', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+        centerTitle: true,
         actions: [
           IconButton(
             icon: const Icon(Icons.close, color: Colors.white70),

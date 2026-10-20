@@ -155,4 +155,17 @@ class EventsService {
     }
     return {'success': false, 'message': response['message'] ?? 'Không thể lưu yêu thích'};
   }
+
+  Future<Map<String, dynamic>> getSessionSeats(String sessionId) async {
+    final response = await ApiClient().get('/events/sessions/$sessionId/seats');
+    if (response['success'] == true && response['data'] != null) {
+      return response['data'] as Map<String, dynamic>;
+    }
+    return {};
+  }
+
+  Future<Map<String, dynamic>> holdSeats(Map<String, dynamic> payload) async {
+    final response = await ApiClient().post('/events/seats/hold', payload);
+    return response;
+  }
 }
