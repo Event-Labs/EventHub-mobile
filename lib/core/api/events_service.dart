@@ -10,8 +10,14 @@ class EventsService {
   Future<List<EventCategoryModel>> getCategories() async {
     final response = await ApiClient().get(ApiConfig.categories);
     if (response['success'] == true && response['data'] != null) {
-      final List list = response['data'];
-      return list.map((e) => EventCategoryModel.fromJson(e)).toList();
+      final List list = response['data'] is List
+          ? response['data']
+          : (response['data']['items'] ?? []);
+      final apiCats = list.map((e) => EventCategoryModel.fromJson(e)).toList();
+      return [
+        EventCategoryModel(id: 'all', name: 'Tất cả'),
+        ...apiCats,
+      ];
     }
     return [
       EventCategoryModel(id: 'all', name: 'Tất cả'),
@@ -22,18 +28,35 @@ class EventsService {
     ];
   }
 
+  Future<List<EventOrganizerModel>> getOrganizers() async {
+    final response = await ApiClient().get(ApiConfig.organizers);
+    if (response['success'] == true && response['data'] != null) {
+      final List list = response['data'] is List
+          ? response['data']
+          : (response['data']['items'] ?? []);
+      return list.map((e) => EventOrganizerModel.fromJson(e)).toList();
+    }
+    return [];
+  }
+
   Future<List<EventModel>> getPublicEvents({String? search, String? categoryId}) async {
     final Map<String, String> queryParams = {};
-    if (search != null && search.isNotEmpty) {
-      queryParams['search'] = search;
+    if (search != null && search.trim().isNotEmpty) {
+      queryParams['keyword'] = search.trim();
     }
-    if (categoryId != null && categoryId != 'all' && categoryId.isNotEmpty) {
-      queryParams['categoryId'] = categoryId;
+    if (categoryId != null && categoryId != 'all' && categoryId.trim().isNotEmpty) {
+      queryParams['category_id'] = categoryId.trim();
     }
+    queryParams['limit'] = '50';
 
     final response = await ApiClient().get(ApiConfig.events, queryParams: queryParams);
     if (response['success'] == true && response['data'] != null) {
-      final List list = response['data'] is List ? response['data'] : (response['data']['events'] ?? []);
+      final data = response['data'];
+      final List list = data is List
+          ? data
+          : (data['items'] is List
+              ? data['items']
+              : (data['events'] is List ? data['events'] : []));
       return list.map((e) => EventModel.fromJson(e)).toList();
     }
 
@@ -98,16 +121,24 @@ class EventsService {
       return EventModel.fromJson(response['data']);
     }
     final all = await getPublicEvents();
-    return all.firstWhere(
-      (e) => e.id == id,
-      orElse: () => all.first,
-    );
+    if (all.any((e) => e.id == id)) {
+      return all.firstWhere((e) => e.id == id);
+    }
+    if (all.isNotEmpty) {
+      return all.first;
+    }
+    return EventModel(id: id, title: 'Chi tiết sự kiện');
   }
 
   Future<List<EventModel>> getFavoriteEvents() async {
     final response = await ApiClient().get(ApiConfig.favoriteEvents);
     if (response['success'] == true && response['data'] != null) {
-      final List list = response['data'] is List ? response['data'] : [];
+      final data = response['data'];
+      final List list = data is List
+          ? data
+          : (data['items'] is List
+              ? data['items']
+              : (data['events'] is List ? data['events'] : []));
       return list.map((e) => EventModel.fromJson(e)).toList();
     }
     return [];
