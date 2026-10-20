@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../../../core/models/event_model.dart';
-import '../../../../core/theme/app_colors.dart';
 
 class EventCardWidget extends StatelessWidget {
   final EventModel event;
@@ -43,7 +42,7 @@ class EventCardWidget extends StatelessWidget {
             Stack(
               children: [
                 SizedBox(
-                  height: compact ? 150 : 180,
+                  height: compact ? 120 : 180,
                   width: double.infinity,
                   child: event.coverImageUrl != null && event.coverImageUrl!.isNotEmpty
                       ? Image.network(
@@ -134,7 +133,7 @@ class EventCardWidget extends StatelessWidget {
 
             // Content
             Padding(
-              padding: const EdgeInsets.all(14),
+              padding: EdgeInsets.all(compact ? 10 : 14),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -142,25 +141,25 @@ class EventCardWidget extends StatelessWidget {
                     event.title,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: Colors.white,
-                      fontSize: 16,
+                      fontSize: compact ? 13 : 16,
                       fontWeight: FontWeight.bold,
                       height: 1.25,
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  SizedBox(height: compact ? 6 : 10),
                   // Date row
                   Row(
                     children: [
-                      const Icon(Icons.calendar_month, color: Color(0xFFB0CADD), size: 14),
-                      const SizedBox(width: 6),
+                      Icon(Icons.calendar_month, color: const Color(0xFFB0CADD), size: compact ? 12 : 14),
+                      const SizedBox(width: 4),
                       Expanded(
                         child: Text(
                           event.formattedDateTime,
-                          style: const TextStyle(
-                            color: Color(0xFFB0CADD),
-                            fontSize: 12,
+                          style: TextStyle(
+                            color: const Color(0xFFB0CADD),
+                            fontSize: compact ? 11 : 12,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -168,18 +167,18 @@ class EventCardWidget extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 6),
+                  SizedBox(height: compact ? 4 : 6),
                   // Venue row
                   Row(
                     children: [
-                      const Icon(Icons.location_on, color: Color(0xFFB0CADD), size: 14),
-                      const SizedBox(width: 6),
+                      Icon(Icons.location_on, color: const Color(0xFFB0CADD), size: compact ? 12 : 14),
+                      const SizedBox(width: 4),
                       Expanded(
                         child: Text(
                           event.locationSummary,
-                          style: const TextStyle(
-                            color: Color(0xFFB0CADD),
-                            fontSize: 12,
+                          style: TextStyle(
+                            color: const Color(0xFFB0CADD),
+                            fontSize: compact ? 11 : 12,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -187,13 +186,13 @@ class EventCardWidget extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  SizedBox(height: compact ? 8 : 12),
                   // Price row
                   Text(
                     event.formattedPrice,
-                    style: const TextStyle(
-                      color: Color(0xFFFFB690),
-                      fontSize: 15,
+                    style: TextStyle(
+                      color: const Color(0xFFFFB690),
+                      fontSize: compact ? 13 : 15,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
