@@ -9,11 +9,15 @@ import '../../../tickets/presentation/pages/my_tickets_page.dart';
 class PaymentPage extends StatefulWidget {
   final String orderId;
   final Map<String, dynamic>? initialData;
+  final int? initialSecondsLeft;
+  final DateTime? expiresAt;
 
   const PaymentPage({
     super.key,
     required this.orderId,
     this.initialData,
+    this.initialSecondsLeft,
+    this.expiresAt,
   });
 
   @override
@@ -25,6 +29,7 @@ class _PaymentPageState extends State<PaymentPage> {
   Timer? _pollingTimer;
   Timer? _countdownTimer;
   int _secondsLeft = 900; // 15 mins default
+  DateTime? _expiresAt;
   bool _isChecking = false;
   bool _isCancelling = false;
   bool _hasNavigated = false;
@@ -33,6 +38,10 @@ class _PaymentPageState extends State<PaymentPage> {
   void initState() {
     super.initState();
     _orderData = widget.initialData;
+    _expiresAt = widget.expiresAt;
+    if (widget.initialSecondsLeft != null && widget.initialSecondsLeft! > 0) {
+      _secondsLeft = widget.initialSecondsLeft!;
+    }
     _parseExpiredTime();
     _startPolling();
     _startCountdown();
@@ -46,24 +55,85 @@ class _PaymentPageState extends State<PaymentPage> {
   }
 
   void _parseExpiredTime() {
-    final expiredAtStr = _orderData?['order']?['expired_at'];
-    if (expiredAtStr != null) {
-      try {
-        final expiredDate = DateTime.parse(expiredAtStr);
-        final diff = expiredDate.difference(DateTime.now()).inSeconds;
-        _secondsLeft = diff > 0 ? diff : 0;
-      } catch (_) {}
+    if (_expiresAt == null) {
+      final expiredAtStr = _orderData?['order']?['expired_at'] ?? _orderData?['expired_at'];
+      if (expiredAtStr != null) {
+        try {
+          _expiresAt = DateTime.parse(expiredAtStr.toString());
+        } catch (_) {}
+      }
+    }
+
+    if (_expiresAt != null) {
+      final diff = _expiresAt!.difference(DateTime.now()).inSeconds;
+      if (diff > 0) {
+        if (widget.initialSecondsLeft == null || diff < _secondsLeft) {
+          _secondsLeft = diff;
+        }
+      } else {
+        _secondsLeft = 0;
+      }
     }
   }
 
   void _startCountdown() {
+    _countdownTimer?.cancel();
     _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_secondsLeft > 0) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      if (_expiresAt != null) {
+        final diff = _expiresAt!.difference(DateTime.now()).inSeconds;
+        if (diff > 0) {
+          setState(() => _secondsLeft = diff);
+        } else {
+          setState(() => _secondsLeft = 0);
+          timer.cancel();
+          _handleCountdownExpired();
+        }
+      } else if (_secondsLeft > 0) {
         setState(() => _secondsLeft--);
       } else {
         timer.cancel();
+        _handleCountdownExpired();
       }
     });
+  }
+
+  void _handleCountdownExpired() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF101932),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 24),
+            SizedBox(width: 8),
+            Text('Hết thời gian thanh toán', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: const Text(
+          'Thời gian giữ vé và thanh toán đã hết. Vui lòng quay lại chọn vé để thực hiện đơn hàng mới.',
+          style: TextStyle(color: Color(0xFFB0CADD), fontSize: 13),
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              Navigator.pop(context);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFE6C17A),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('Quay lại', style: TextStyle(color: Color(0xFF070D1E), fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
   }
 
   void _startPolling() {
@@ -161,21 +231,25 @@ class _PaymentPageState extends State<PaymentPage> {
         : '0 đ';
     final orderCode = order['order_code']?.toString() ?? widget.orderId.substring(0, 8);
 
-    return Scaffold(
-      backgroundColor: const Color(0xFF070D1E),
-      appBar: AppBar(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        _handleCancel();
+      },
+      child: Scaffold(
         backgroundColor: const Color(0xFF070D1E),
-        elevation: 0,
-        title: const Text('Thanh Toán Đơn Hàng', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.close, color: Colors.white70),
+        appBar: AppBar(
+          backgroundColor: const Color(0xFF070D1E),
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18),
             onPressed: _handleCancel,
           ),
-        ],
-      ),
-      body: SingleChildScrollView(
+          title: const Text('Thanh Toán Đơn Hàng', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+          centerTitle: true,
+        ),
+        body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
@@ -319,6 +393,7 @@ class _PaymentPageState extends State<PaymentPage> {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }
