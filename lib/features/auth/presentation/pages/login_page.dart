@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:eventhub_mobile/core/api/api_config.dart';
 import 'package:eventhub_mobile/core/api/auth_service.dart';
 import 'package:eventhub_mobile/core/models/user_model.dart';
 import 'package:eventhub_mobile/core/theme/app_colors.dart';
@@ -377,49 +378,156 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Expanded(
-            child: Row(
+  void _showServerConfigDialog() {
+    final controller = TextEditingController(text: ApiConfig.apiHost);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF0C1446),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.dns, color: AppColors.primaryContainer, size: 22),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Cấu hình Server Backend',
+                softWrap: true,
+                style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Backend URL hiện tại:\n${ApiConfig.baseUrl}',
+              style: const TextStyle(color: Color(0xFF22C55E), fontSize: 12, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Nhập IP máy tính chạy backend:',
+              style: TextStyle(color: AppColors.secondary, fontSize: 13),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: controller,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: const Color(0xFF122155),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                hintText: '10.0.2.2 hoặc 127.0.0.1 hoặc 192.168.1.174',
+                hintStyle: const TextStyle(color: Colors.white38),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
               children: [
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: const BoxDecoration(
-                    color: AppColors.primaryContainer,
-                    shape: BoxShape.circle,
-                  ),
+                ActionChip(
+                  label: const Text('Máy ảo (10.0.2.2)', style: TextStyle(fontSize: 11)),
+                  backgroundColor: const Color(0xFF122155),
+                  labelStyle: const TextStyle(color: Colors.white),
+                  onPressed: () => controller.text = '10.0.2.2',
                 ),
-                const SizedBox(width: 8),
-                const Flexible(
-                  child: Text(
-                    'EVENT NETWORK LIVE',
-                    softWrap: true,
-                    style: TextStyle(
-                      color: AppColors.secondary,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
+                ActionChip(
+                  label: const Text('USB Cáp (127.0.0.1)', style: TextStyle(fontSize: 11)),
+                  backgroundColor: const Color(0xFF122155),
+                  labelStyle: const TextStyle(color: Colors.white),
+                  onPressed: () => controller.text = '127.0.0.1',
+                ),
+                ActionChip(
+                  label: const Text('Wi-Fi (192.168.1.174)', style: TextStyle(fontSize: 11)),
+                  backgroundColor: const Color(0xFF122155),
+                  labelStyle: const TextStyle(color: Colors.white),
+                  onPressed: () => controller.text = '192.168.1.174',
                 ),
               ],
             ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Đóng', style: TextStyle(color: AppColors.secondary)),
           ),
-          const SizedBox(width: 8),
-          const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.wifi, color: AppColors.secondary, size: 16),
-              SizedBox(width: 8),
-              Icon(Icons.battery_full, color: AppColors.secondary, size: 18),
-            ],
+          ElevatedButton(
+            onPressed: () async {
+              final newHost = controller.text.trim();
+              if (newHost.isNotEmpty) {
+                ApiConfig.setDynamicHost(newHost);
+                setState(() {});
+                Navigator.pop(ctx);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Đã cập nhật: ${ApiConfig.baseUrl}'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryContainer),
+            child: const Text('Lưu & Áp Dụng', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: _showServerConfigDialog,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: Row(
+                children: [
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: const BoxDecoration(
+                      color: AppColors.primaryContainer,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Flexible(
+                    child: Text(
+                      'EVENT NETWORK LIVE',
+                      softWrap: true,
+                      style: TextStyle(
+                        color: AppColors.secondary,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  const Icon(Icons.settings, color: Colors.white30, size: 12),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.wifi, color: AppColors.secondary, size: 16),
+                SizedBox(width: 8),
+                Icon(Icons.battery_full, color: AppColors.secondary, size: 18),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

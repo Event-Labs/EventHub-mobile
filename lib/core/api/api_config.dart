@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 
 class ApiConfig {
@@ -13,6 +15,8 @@ class ApiConfig {
     _dynamicHost = host;
   }
 
+  static bool get hasResolvedHost => (_dynamicHost != null && _dynamicHost!.isNotEmpty) || _envHost.trim().isNotEmpty;
+
   /// List of candidate backend hosts for auto-fallback on physical devices or emulators
   static List<String> get candidateHosts {
     final list = <String>[];
@@ -24,17 +28,68 @@ class ApiConfig {
       if (!list.contains(h)) list.add(h);
     }
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-      // 1. USB with adb reverse tcp:3000 tcp:3000 (Samsung S8)
+      // 1. USB with adb reverse tcp:3000 tcp:3000 (Physical Android)
       if (!list.contains('127.0.0.1')) list.add('127.0.0.1');
-      // 2. Local Wi-Fi network host IP (Direct PC connection)
-      if (!list.contains('192.168.1.174')) list.add('192.168.1.174');
-      // 3. Android Emulator host alias
+      // 2. Android Studio Emulator host loopback to PC
       if (!list.contains('10.0.2.2')) list.add('10.0.2.2');
+      // 3. Local Wi-Fi network host IP (Direct PC connection)
+      if (!list.contains('192.168.1.174')) list.add('192.168.1.174');
     } else {
       if (!list.contains('localhost')) list.add('localhost');
       if (!list.contains('127.0.0.1')) list.add('127.0.0.1');
     }
     return list;
+  }
+
+  static bool _isDetecting = false;
+
+  /// Parallel probe across candidate hosts:
+  /// - Detects 10.0.2.2 on Android Studio Emulator in ~5ms
+  /// - Detects 127.0.0.1 on USB with adb reverse in ~2ms
+  /// - Detects 192.168.1.174 on local Wi-Fi in ~15ms
+  static Future<String?> autoDetectWorkingHost({bool forceRefresh = false}) async {
+    if (kIsWeb) return 'localhost';
+    if (_envHost.trim().isNotEmpty) {
+      return apiHost;
+    }
+    if (!forceRefresh && _dynamicHost != null && _dynamicHost!.isNotEmpty) {
+      return _dynamicHost;
+    }
+    if (_isDetecting) return _dynamicHost;
+    _isDetecting = true;
+
+    try {
+      final candidates = candidateHosts;
+      final port = apiPort;
+
+      final completer = Completer<String?>();
+      int pending = candidates.length;
+
+      for (final host in candidates) {
+        Socket.connect(host, port, timeout: const Duration(milliseconds: 1200)).then((socket) {
+          socket.destroy();
+          if (!completer.isCompleted) {
+            _dynamicHost = host;
+            completer.complete(host);
+          }
+        }).catchError((_) {
+          pending--;
+          if (pending <= 0 && !completer.isCompleted) {
+            completer.complete(null);
+          }
+        });
+      }
+
+      final result = await completer.future.timeout(
+        const Duration(milliseconds: 1400),
+        onTimeout: () => null,
+      );
+      return result ?? _dynamicHost;
+    } catch (_) {
+      return _dynamicHost;
+    } finally {
+      _isDetecting = false;
+    }
   }
 
   /// Resolves the active backend host:
@@ -68,7 +123,7 @@ class ApiConfig {
       return 'localhost';
     }
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-      return '10.0.2.2'; // Android Emulator default host
+      return '127.0.0.1'; // USB default host; auto-probes 192.168.1.174 & 10.0.2.2 if unreachable
     }
     return 'localhost';
   }

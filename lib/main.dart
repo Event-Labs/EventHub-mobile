@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'core/api/api_config.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/presentation/pages/login_page.dart';
 import 'features/auth/presentation/pages/verify_email_page.dart';
@@ -12,6 +13,9 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   GoogleFonts.config.allowRuntimeFetching = true;
+
+  // Auto-detect fastest working backend host (Android Studio Emulator: 10.0.2.2, USB: 127.0.0.1)
+  unawaited(ApiConfig.autoDetectWorkingHost());
 
   // Custom ErrorWidget builder to avoid pitch black / red screen crashes
   ErrorWidget.builder = (FlutterErrorDetails details) {

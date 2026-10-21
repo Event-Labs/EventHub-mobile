@@ -8,7 +8,7 @@ class ApiClient {
   factory ApiClient() => _instance;
   ApiClient._internal();
 
-  static const Duration _timeout = Duration(seconds: 25);
+  static const Duration _timeout = Duration(seconds: 10);
 
   String? _authToken;
 
@@ -52,33 +52,19 @@ class ApiClient {
     return uri;
   }
 
-  bool _isProbing = false;
-
-  Future<bool> _tryFindWorkingHost() async {
-    if (_isProbing) return false;
-    _isProbing = true;
-    try {
-      final candidates = ApiConfig.candidateHosts;
-      final currentHost = ApiConfig.apiHost;
-
-      for (final host in candidates) {
-        if (host == currentHost) continue;
-        try {
-          final probeUri = Uri.parse('${ApiConfig.apiProtocol}://$host:${ApiConfig.apiPort}/api/events?limit=1');
-          final response = await http.get(probeUri).timeout(const Duration(seconds: 2));
-          if (response.statusCode >= 200 && response.statusCode < 500) {
-            ApiConfig.setDynamicHost(host);
-            return true;
-          }
-        } catch (_) {}
-      }
-      return false;
-    } finally {
-      _isProbing = false;
+  Future<void> _ensureHostResolved() async {
+    if (!ApiConfig.hasResolvedHost) {
+      await ApiConfig.autoDetectWorkingHost();
     }
   }
 
+  Future<bool> _tryFindWorkingHost() async {
+    final host = await ApiConfig.autoDetectWorkingHost(forceRefresh: true);
+    return host != null && host.isNotEmpty;
+  }
+
   Future<dynamic> get(String path, {Map<String, String>? queryParams}) async {
+    await _ensureHostResolved();
     try {
       final uri = _buildUri(path, queryParams);
       final response = await http.get(uri, headers: _headers).timeout(_timeout);
@@ -101,6 +87,7 @@ class ApiClient {
   }
 
   Future<dynamic> post(String path, Map<String, dynamic> body) async {
+    await _ensureHostResolved();
     try {
       final uri = _buildUri(path);
       final response = await http.post(
@@ -131,6 +118,7 @@ class ApiClient {
   }
 
   Future<dynamic> patch(String path, Map<String, dynamic> body) async {
+    await _ensureHostResolved();
     try {
       final uri = _buildUri(path);
       final response = await http.patch(
@@ -161,6 +149,7 @@ class ApiClient {
   }
 
   Future<dynamic> put(String path, Map<String, dynamic> body) async {
+    await _ensureHostResolved();
     try {
       final uri = _buildUri(path);
       final response = await http.put(
@@ -191,6 +180,7 @@ class ApiClient {
   }
 
   Future<dynamic> delete(String path, {Map<String, dynamic>? body}) async {
+    await _ensureHostResolved();
     try {
       final uri = _buildUri(path);
       final response = await http.delete(
