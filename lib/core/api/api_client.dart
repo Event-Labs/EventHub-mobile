@@ -101,7 +101,13 @@ class ApiClient {
       if (response.statusCode >= 200 && response.statusCode < 300) {
         return body;
       } else {
-        final msg = body['message'] ?? 'Thao tác không thành công (${response.statusCode})';
+        String msg = body['message'] ?? 'Thao tác không thành công (${response.statusCode})';
+        if (body['error'] is Map && body['error']['details'] is List && (body['error']['details'] as List).isNotEmpty) {
+          final firstDetail = (body['error']['details'] as List).first;
+          if (firstDetail is Map && firstDetail['message'] != null) {
+            msg = firstDetail['message'].toString();
+          }
+        }
         return {
           'success': false,
           'message': msg,
