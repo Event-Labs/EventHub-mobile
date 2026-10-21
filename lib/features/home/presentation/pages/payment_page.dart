@@ -27,6 +27,7 @@ class _PaymentPageState extends State<PaymentPage> {
   int _secondsLeft = 900; // 15 mins default
   bool _isChecking = false;
   bool _isCancelling = false;
+  bool _hasNavigated = false;
 
   @override
   void initState() {
@@ -74,7 +75,7 @@ class _PaymentPageState extends State<PaymentPage> {
   Future<void> _checkStatus({bool silent = false}) async {
     if (!silent) setState(() => _isChecking = true);
     final res = await OrdersService().getOrderStatus(widget.orderId);
-    if (!silent) setState(() => _isChecking = false);
+    if (!silent && mounted) setState(() => _isChecking = false);
 
     if (res['success'] == true && mounted) {
       final data = res['data'];
@@ -82,9 +83,7 @@ class _PaymentPageState extends State<PaymentPage> {
       final status = data?['order']?['status']?.toString().toUpperCase();
 
       if (status == 'PAID') {
-        _pollingTimer?.cancel();
-        _countdownTimer?.cancel();
-        _showSuccessDialog();
+        _navigateToMyTickets();
       } else if (status == 'CANCELLED' || status == 'EXPIRED') {
         _pollingTimer?.cancel();
         _countdownTimer?.cancel();
@@ -96,6 +95,27 @@ class _PaymentPageState extends State<PaymentPage> {
         );
       }
     }
+  }
+
+  void _navigateToMyTickets() {
+    if (_hasNavigated || !mounted) return;
+    _hasNavigated = true;
+    _pollingTimer?.cancel();
+    _countdownTimer?.cancel();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Thanh toán thành công. Vé của bạn đã sẵn sàng!'),
+        backgroundColor: Color(0xFF22C55E),
+        duration: Duration(seconds: 3),
+      ),
+    );
+
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const MyTicketsPage()),
+      (route) => route.isFirst,
+    );
   }
 
   Future<void> _handleCancel() async {
@@ -123,46 +143,6 @@ class _PaymentPageState extends State<PaymentPage> {
         Navigator.pop(context);
       }
     }
-  }
-
-  void _showSuccessDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF101932),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: const Column(
-          children: [
-            Icon(Icons.check_circle, color: Color(0xFF22C55E), size: 68),
-            SizedBox(height: 12),
-            Text('Thanh Toán Thành Công!', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20)),
-          ],
-        ),
-        content: const Text(
-          'Đơn hàng của bạn đã được PayOS xác nhận thành công. Vé điện tử kèm mã QR đã sẵn sàng trong ví vé của bạn!',
-          style: TextStyle(color: Color(0xFFB0CADD), fontSize: 13, height: 1.4),
-          textAlign: TextAlign.center,
-        ),
-        actions: [
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => const MyTicketsPage()),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primaryContainer,
-              minimumSize: const Size(double.infinity, 48),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            ),
-            child: const Text('Xem Vé Của Tôi', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
-    );
   }
 
   String _formatTimer(int totalSeconds) {

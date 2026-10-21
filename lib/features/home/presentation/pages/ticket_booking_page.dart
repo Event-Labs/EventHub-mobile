@@ -168,7 +168,7 @@ class _TicketBookingPageState extends State<TicketBookingPage> {
   Map<String, dynamic>? _appliedPromo;
   String? _appliedPromoCode;
   double _promoDiscountAmount = 0.0;
-  bool _termsAccepted = true;
+  bool _termsAccepted = false;
   bool _isCheckingOut = false;
 
   @override
@@ -2894,100 +2894,50 @@ class _TicketBookingPageState extends State<TicketBookingPage> {
                   ],
                 ),
               ),
-
-              const SizedBox(height: 14),
-
-              // Mandatory Checkbox (matching Web)
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: Checkbox(
-                      value: _termsAccepted,
-                      activeColor: const Color(0xFFC99A47),
-                      checkColor: const Color(0xFF070D1E),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                      side: BorderSide(
-                        color: _termsAccepted ? const Color(0xFFC99A47) : Colors.white38,
-                        width: 1.5,
-                      ),
-                      onChanged: (val) => setState(() => _termsAccepted = val ?? false),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => setState(() => _termsAccepted = !_termsAccepted),
-                      child: RichText(
-                        text: const TextSpan(
-                          text: 'Tôi đã đọc và đồng ý với điều khoản tham dự và chính sách hoàn tiền của sự kiện này ',
-                          style: TextStyle(color: Colors.white, fontSize: 12, height: 1.4),
-                          children: [
-                            TextSpan(
-                              text: '*',
-                              style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
             ],
           ),
         ),
 
         const SizedBox(height: 16),
 
-        // 7. Total Price Breakdown
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: const Color(0xFF101932),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: const Color(0xFFC99A47).withOpacity(0.3)),
-          ),
-          child: Column(
+        // Mandatory Terms Checkbox at bottom of page
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('Tạm tính:', style: TextStyle(color: Color(0xFF8B9CB5), fontSize: 13)),
-                  Text(_formatCurrency(_subtotalPrice), style: const TextStyle(color: Colors.white, fontSize: 13)),
-                ],
-              ),
-              if (_promoDiscountAmount > 0) ...[
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('Giảm giá voucher:', style: TextStyle(color: Color(0xFF06B6D4), fontSize: 13)),
-                    Text('-${_formatCurrency(_promoDiscountAmount)}',
-                        style: const TextStyle(color: Color(0xFF06B6D4), fontSize: 13, fontWeight: FontWeight.bold)),
-                  ],
+              SizedBox(
+                width: 24,
+                height: 24,
+                child: Checkbox(
+                  value: _termsAccepted,
+                  activeColor: const Color(0xFFC99A47),
+                  checkColor: const Color(0xFF070D1E),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                  side: BorderSide(
+                    color: _termsAccepted ? const Color(0xFFC99A47) : Colors.white38,
+                    width: 1.5,
+                  ),
+                  onChanged: (val) => setState(() => _termsAccepted = val ?? false),
                 ),
-              ],
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 10),
-                child: Divider(color: Colors.white12, height: 1),
               ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('Tổng thanh toán:',
-                      style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
-                  Text(
-                    _formatCurrency(_finalPrice),
-                    style: const TextStyle(
-                      color: Color(0xFFFFB690),
-                      fontSize: 20,
-                      fontWeight: FontWeight.w900,
+              const SizedBox(width: 10),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => setState(() => _termsAccepted = !_termsAccepted),
+                  child: RichText(
+                    text: const TextSpan(
+                      text: 'Tôi đã đọc và đồng ý với điều khoản tham dự và chính sách hoàn tiền của sự kiện này ',
+                      style: TextStyle(color: Colors.white, fontSize: 13, height: 1.4),
+                      children: [
+                        TextSpan(
+                          text: '*',
+                          style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold),
+                        ),
+                      ],
                     ),
                   ),
-                ],
+                ),
               ),
             ],
           ),
