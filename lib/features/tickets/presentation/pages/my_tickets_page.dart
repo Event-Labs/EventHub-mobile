@@ -205,14 +205,6 @@ class _MyTicketsPageState extends State<MyTicketsPage> {
             ),
           ],
         ),
-        actions: [
-          IconButton(
-            onPressed: _loadTickets,
-            icon: const Icon(Icons.refresh, color: Color(0xFFB0CADD)),
-            tooltip: 'Làm mới',
-          ),
-          const SizedBox(width: 4),
-        ],
       ),
       body: Column(
         children: [

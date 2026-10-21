@@ -158,6 +158,7 @@ class _TicketBookingPageState extends State<TicketBookingPage> {
   // 15-minute Countdown Timer (matching Image 3 & Web)
   Timer? _countdownTimer;
   int _countdownSeconds = 900;
+  DateTime? _holdExpiresAt;
 
   // Bottom sheet summary status
   bool _isSummarySheetOpen = false;
@@ -258,12 +259,22 @@ class _TicketBookingPageState extends State<TicketBookingPage> {
 
   void _startCountdown() {
     _countdownTimer?.cancel();
+    _holdExpiresAt ??= DateTime.now().add(Duration(seconds: _countdownSeconds > 0 ? _countdownSeconds : 900));
     _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (!mounted) {
         timer.cancel();
         return;
       }
-      if (_countdownSeconds > 0) {
+      if (_holdExpiresAt != null) {
+        final remaining = _holdExpiresAt!.difference(DateTime.now()).inSeconds;
+        if (remaining > 0) {
+          setState(() => _countdownSeconds = remaining);
+        } else {
+          setState(() => _countdownSeconds = 0);
+          timer.cancel();
+          _handleCountdownExpired();
+        }
+      } else if (_countdownSeconds > 0) {
         setState(() => _countdownSeconds--);
       } else {
         timer.cancel();
@@ -297,6 +308,7 @@ class _TicketBookingPageState extends State<TicketBookingPage> {
               setState(() {
                 _currentStep = 1;
                 _countdownSeconds = 900;
+                _holdExpiresAt = null;
               });
             },
             style: ElevatedButton.styleFrom(
@@ -738,7 +750,15 @@ class _TicketBookingPageState extends State<TicketBookingPage> {
           'event_id': widget.event.id,
           'items': _buildOrderItems().map((i) => i.toJson()).toList(),
         };
-        await EventsService().holdSeats(payload);
+        final res = await EventsService().holdSeats(payload);
+        if (res['data']?['hold_expires_at'] != null) {
+          final parsed = DateTime.tryParse(res['data']['hold_expires_at'].toString())?.toLocal();
+          if (parsed != null) {
+            _holdExpiresAt = parsed;
+            final diff = parsed.difference(DateTime.now()).inSeconds;
+            if (diff > 0) _countdownSeconds = diff;
+          }
+        }
       } catch (_) {}
     }
 
@@ -750,6 +770,9 @@ class _TicketBookingPageState extends State<TicketBookingPage> {
     }
 
     _syncAttendeeSlots();
+    if (_holdExpiresAt == null || _holdExpiresAt!.isBefore(DateTime.now())) {
+      _holdExpiresAt = DateTime.now().add(Duration(seconds: _countdownSeconds > 0 ? _countdownSeconds : 900));
+    }
     _startCountdown();
     setState(() => _currentStep = 2);
   }
@@ -1001,6 +1024,8 @@ class _TicketBookingPageState extends State<TicketBookingPage> {
             builder: (_) => PaymentPage(
               orderId: orderId,
               initialData: orderData,
+              initialSecondsLeft: _countdownSeconds,
+              expiresAt: _holdExpiresAt,
             ),
           ),
         );

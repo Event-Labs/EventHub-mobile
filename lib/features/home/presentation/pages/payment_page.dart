@@ -10,11 +10,15 @@ import '../../../tickets/presentation/pages/my_tickets_page.dart';
 class PaymentPage extends StatefulWidget {
   final String orderId;
   final Map<String, dynamic>? initialData;
+  final int? initialSecondsLeft;
+  final DateTime? expiresAt;
 
   const PaymentPage({
     super.key,
     required this.orderId,
     this.initialData,
+    this.initialSecondsLeft,
+    this.expiresAt,
   });
 
   /// Helper converting PayOS VietQR text/url to a scannable QR image url (identical to Web)
@@ -36,6 +40,7 @@ class _PaymentPageState extends State<PaymentPage> {
   Timer? _pollingTimer;
   Timer? _countdownTimer;
   int _secondsLeft = 900; // 15 mins default
+  DateTime? _expiresAt;
   bool _isChecking = false;
   bool _isCancelling = false;
   bool _hasNavigated = false;
@@ -44,6 +49,10 @@ class _PaymentPageState extends State<PaymentPage> {
   void initState() {
     super.initState();
     _orderData = widget.initialData;
+    _expiresAt = widget.expiresAt;
+    if (widget.initialSecondsLeft != null && widget.initialSecondsLeft! > 0) {
+      _secondsLeft = widget.initialSecondsLeft!;
+    }
     _parseExpiredTime();
     _startCountdown();
     _startPolling();
@@ -71,27 +80,89 @@ class _PaymentPageState extends State<PaymentPage> {
   }
 
   void _parseExpiredTime() {
-    final expiredAtStr = _orderData?['order']?['expired_at']?.toString();
-    if (expiredAtStr != null && expiredAtStr.isNotEmpty) {
-      try {
-        final expiredDate = DateTime.parse(expiredAtStr).toUtc();
-        final now = DateTime.now().toUtc();
-        final diff = expiredDate.difference(now).inSeconds;
-        _secondsLeft = diff > 0 ? diff : 0;
-      } catch (_) {}
+    if (_expiresAt == null) {
+      final expiredAtStr = _orderData?['order']?['expired_at'] ?? _orderData?['expired_at'];
+      if (expiredAtStr != null && expiredAtStr.toString().isNotEmpty) {
+        try {
+          _expiresAt = DateTime.parse(expiredAtStr.toString()).toLocal();
+        } catch (_) {}
+      }
+    }
+
+    if (_expiresAt != null) {
+      final diff = _expiresAt!.difference(DateTime.now()).inSeconds;
+      if (diff > 0) {
+        if (widget.initialSecondsLeft == null || diff < _secondsLeft) {
+          _secondsLeft = diff;
+        }
+      } else {
+        _secondsLeft = 0;
+      }
     }
   }
 
   void _startCountdown() {
+    _countdownTimer?.cancel();
     _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_secondsLeft > 0) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      if (_expiresAt != null) {
+        final diff = _expiresAt!.difference(DateTime.now()).inSeconds;
+        if (diff > 0) {
+          setState(() => _secondsLeft = diff);
+        } else {
+          setState(() => _secondsLeft = 0);
+          timer.cancel();
+          _handleCountdownExpired();
+        }
+      } else if (_secondsLeft > 0) {
         setState(() => _secondsLeft--);
       } else {
         timer.cancel();
         _pollingTimer?.cancel();
-        if (mounted) setState(() {});
+        if (mounted) {
+          setState(() {});
+          _handleCountdownExpired();
+        }
       }
     });
+  }
+
+  void _handleCountdownExpired() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF101932),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 24),
+            SizedBox(width: 8),
+            Text('Hết thời gian thanh toán', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: const Text(
+          'Thời gian giữ vé và thanh toán đã hết. Vui lòng quay lại chọn vé để thực hiện đơn hàng mới.',
+          style: TextStyle(color: Color(0xFFB0CADD), fontSize: 13),
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              Navigator.pop(context);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFE6C17A),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('Quay lại', style: TextStyle(color: Color(0xFF070D1E), fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
   }
 
   void _startPolling() {
@@ -290,25 +361,39 @@ class _PaymentPageState extends State<PaymentPage> {
 
     final isExpired = _isExpired;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFF070D1E),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF0C1446),
-        elevation: 0,
-        title: const Text(
-          'Thanh Toán Đơn Hàng',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
-        ),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.close, color: Colors.white70),
+    return PopScope(
+      canPop: isExpired,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (isExpired) {
+          Navigator.pop(context);
+        } else {
+          _handleCancel();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFF070D1E),
+        appBar: AppBar(
+          backgroundColor: const Color(0xFF0C1446),
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18),
             onPressed: isExpired ? () => Navigator.pop(context) : _handleCancel,
           ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+          title: const Text(
+            'Thanh Toán Đơn Hàng',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+          ),
+          centerTitle: true,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.close, color: Colors.white70),
+              onPressed: isExpired ? () => Navigator.pop(context) : _handleCancel,
+            ),
+          ],
+        ),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
         child: Column(
           children: [
             // Event title & Subtitle
@@ -619,8 +704,9 @@ class _PaymentPageState extends State<PaymentPage> {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildDetailRow(String label, String value, {bool isHighlight = false, bool isMonospace = false, String? statusTone}) {
     Color valColor = Colors.white;
@@ -639,7 +725,14 @@ class _PaymentPageState extends State<PaymentPage> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13)),
+        Flexible(
+          child: Text(
+            label,
+            softWrap: true,
+            style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
+          ),
+        ),
+        const SizedBox(width: 8),
         Text(
           value,
           style: TextStyle(

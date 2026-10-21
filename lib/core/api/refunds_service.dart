@@ -85,29 +85,41 @@ class RefundsService {
 
   Future<Map<String, dynamic>> submitRefundRequest({
     required String ticketId,
+    String? orderId,
     required String reason,
+    String? customerNote,
     required String bankName,
     required String bankAccountNumber,
     required String bankAccountName,
   }) async {
-    final response = await ApiClient().post(ApiConfig.refunds, {
-      'ticket_id': ticketId,
+    final uuidRegex = RegExp(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$');
+    final Map<String, dynamic> body = {
+      if (ticketId.isNotEmpty && uuidRegex.hasMatch(ticketId)) 'ticket_id': ticketId,
+      if (orderId != null && uuidRegex.hasMatch(orderId)) 'order_id': orderId,
       'reason': reason,
+      if (customerNote != null && customerNote.trim().isNotEmpty) 'customer_note': customerNote.trim(),
       'bank_name': bankName,
       'bank_account_number': bankAccountNumber,
-      'bank_account_name': bankAccountName,
-    });
+      'bank_account_name': bankAccountName.trim().toUpperCase(),
+      'bank_info': {
+        'bank_name': bankName,
+        'account_number': bankAccountNumber,
+        'account_holder': bankAccountName.trim().toUpperCase(),
+      },
+    };
+
+    final response = await ApiClient().post(ApiConfig.refunds, body);
 
     if (response['success'] == true) {
       return {
         'success': true,
-        'message': response['message'] ?? 'Yêu cầu hoàn vé đã được gửi!',
+        'message': response['message'] ?? 'Gửi yêu cầu hoàn tiền thành công. Ban tổ chức sẽ xem xét trong vòng 48h.',
         'data': response['data'],
       };
     }
     return {
       'success': false,
-      'message': response['message'] ?? 'Không thể gửi yêu cầu hoàn vé',
+      'message': response['message'] ?? 'Không thể gửi yêu cầu hoàn tiền. Vui lòng kiểm tra chính sách hoàn vé của sự kiện.',
     };
   }
 
