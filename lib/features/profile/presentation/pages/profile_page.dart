@@ -8,12 +8,14 @@ import '../../../favorites/presentation/pages/favorite_events_page.dart';
 import '../../../feedback/presentation/pages/feedback_page.dart';
 import '../../../notifications/presentation/pages/notifications_page.dart';
 import '../../../refunds/presentation/pages/my_refunds_page.dart';
+import '../../../home/presentation/pages/home_discovery_page.dart';
 import '../../../staff/presentation/pages/staff_dashboard_page.dart';
 import 'change_password_page.dart';
 import 'edit_profile_page.dart';
 
 class ProfilePage extends StatefulWidget {
-  const ProfilePage({super.key});
+  final bool isStaffPortal;
+  const ProfilePage({super.key, this.isStaffPortal = false});
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
@@ -37,11 +39,7 @@ class _ProfilePageState extends State<ProfilePage> {
     final user = AuthService().currentUser;
     bool hasActive = false;
     if (user != null && user.isStaff) {
-      if (user.hasRole('STAFF')) {
-        hasActive = await StaffService().hasActiveOrUpcomingEvents();
-      } else {
-        hasActive = true;
-      }
+      hasActive = true;
     }
     if (mounted) {
       setState(() {
@@ -269,18 +267,68 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
                     const SizedBox(height: 10),
 
-                    // Role Badge
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryContainer.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: AppColors.primaryContainer.withOpacity(0.5)),
-                      ),
-                      child: Text(
-                        (user?.roleDisplayName ?? user?.role ?? 'Khách hàng').toUpperCase(),
-                        style: const TextStyle(color: AppColors.primaryContainer, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.8),
-                      ),
+                    // Role Badge & Switch Button
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryContainer.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: AppColors.primaryContainer.withOpacity(0.5)),
+                          ),
+                          child: Text(
+                            (user?.roleDisplayName ?? user?.role ?? 'Khách hàng').toUpperCase(),
+                            style: const TextStyle(color: AppColors.primaryContainer, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.8),
+                          ),
+                        ),
+                        if (user != null && user.canSwitchRoles)
+                          InkWell(
+                            onTap: () {
+                              if (widget.isStaffPortal) {
+                                Navigator.of(context).pushAndRemoveUntil(
+                                  MaterialPageRoute(builder: (_) => const HomeDiscoveryPage()),
+                                  (route) => false,
+                                );
+                              } else {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(builder: (_) => const StaffDashboardPage()),
+                                ).then((_) => _fetchLatestProfile());
+                              }
+                            },
+                            borderRadius: BorderRadius.circular(20),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: widget.isStaffPortal
+                                      ? const [Color(0xFF0284C7), Color(0xFF06B6D4)]
+                                      : const [Color(0xFFEA580C), Color(0xFFF97316)],
+                                ),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    widget.isStaffPortal ? Icons.storefront_outlined : Icons.shield_outlined,
+                                    color: Colors.white,
+                                    size: 14,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    widget.isStaffPortal ? 'VỀ KHÁCH HÀNG' : 'VÀO STAFF PORTAL',
+                                    style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
 
                     if (user?.bio != null && user!.bio!.isNotEmpty) ...[
@@ -301,36 +349,31 @@ class _ProfilePageState extends State<ProfilePage> {
 
               const SizedBox(height: 24),
 
-              // Profile Options Menu
-              if (_hasActiveStaffEvents) ...[
-                _buildProfileOption(
-                  icon: Icons.badge_outlined,
-                  title: 'Cổng nhân sự (Staff Portal)',
-                  subtitle: 'Quản lý soát vé & tra cứu người tham dự',
-                  onTap: () async {
-                    if (user?.hasRole('STAFF') == true) {
-                      final hasActive = await StaffService().hasActiveOrUpcomingEvents();
-                      if (!context.mounted) return;
-                      if (hasActive) {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const StaffDashboardPage()),
-                        );
-                      } else {
-                        setState(() => _hasActiveStaffEvents = false);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Tất cả sự kiện được phân công đã kết thúc. Không thể vào cổng nhân sự.'),
-                            backgroundColor: Colors.orange,
-                          ),
-                        );
-                      }
-                    } else {
+              // Profile Options Menu (Role switch option ONLY visible if user has both roles / canSwitchRoles)
+              if (user != null && user.canSwitchRoles) ...[
+                if (widget.isStaffPortal)
+                  _buildProfileOption(
+                    icon: Icons.storefront_outlined,
+                    title: 'Chuyển sang Giao diện Khách hàng',
+                    subtitle: 'Khám phá sự kiện, đặt mua vé, quản lý vé đã mua',
+                    onTap: () {
+                      Navigator.of(context).pushAndRemoveUntil(
+                        MaterialPageRoute(builder: (_) => const HomeDiscoveryPage()),
+                        (route) => false,
+                      );
+                    },
+                  )
+                else
+                  _buildProfileOption(
+                    icon: Icons.shield_outlined,
+                    title: 'Chuyển sang Cổng Nhân Sự (Staff Portal)',
+                    subtitle: 'Soát vé QR camera, bán vé quầy POS, quản lý cổng',
+                    onTap: () {
                       Navigator.of(context).push(
                         MaterialPageRoute(builder: (_) => const StaffDashboardPage()),
-                      );
-                    }
-                  },
-                ),
+                      ).then((_) => _fetchLatestProfile());
+                    },
+                  ),
               ],
               _buildProfileOption(
                 icon: Icons.person_outline,
@@ -482,6 +525,7 @@ class _ProfilePageState extends State<ProfilePage> {
     required VoidCallback onTap,
   }) {
     return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),

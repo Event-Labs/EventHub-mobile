@@ -1,3 +1,6 @@
+import 'dart:convert';
+import '../api/api_client.dart';
+
 class UserModel {
   final String id;
   final String email;
@@ -42,26 +45,92 @@ class UserModel {
     return str;
   }
 
-  factory UserModel.fromJson(Map<String, dynamic> json) {
-    List<String> parsedRoles = [];
+  static List<String> _extractRolesFromJwt(String? token) {
+    if (token == null || token.isEmpty) return [];
+    try {
+      final parts = token.split('.');
+      if (parts.length != 3) return [];
+      String normalized = base64Url.normalize(parts[1]);
+      String payload = utf8.decode(base64Url.decode(normalized));
+      final Map<String, dynamic> data = jsonDecode(payload);
+      final List<String> extracted = [];
+      if (data['roles'] is List) {
+        for (final r in data['roles']) {
+          if (r != null) extracted.add(r.toString());
+        }
+      } else if (data['role'] != null) {
+        extracted.add(data['role'].toString());
+      }
+      return extracted;
+    } catch (_) {
+      return [];
+    }
+  }
+
+  factory UserModel.fromJson(Map<String, dynamic> json, [String? authToken]) {
+    final Set<String> collectedRoles = {};
+
+    // 1. Roles list from API response
     if (json['roles'] != null) {
       if (json['roles'] is List) {
-        parsedRoles = (json['roles'] as List).map((e) => e.toString().trim()).toList();
+        for (final item in json['roles'] as List) {
+          if (item is String && item.trim().isNotEmpty) {
+            collectedRoles.add(item.trim().toUpperCase());
+          } else if (item is Map) {
+            final name = item['name'] ?? item['role'] ?? item['code'];
+            if (name != null && name.toString().trim().isNotEmpty) {
+              collectedRoles.add(name.toString().trim().toUpperCase());
+            }
+          }
+        }
+      } else if (json['roles'] is String && json['roles'].toString().trim().isNotEmpty) {
+        collectedRoles.add(json['roles'].toString().trim().toUpperCase());
       }
     }
 
-    final rolesUpper = parsedRoles.map((r) => r.toUpperCase()).toList();
+    // 2. Single role field from user object
+    final rawRole = json['role'] ?? json['role_name'] ?? json['roleName'];
+    if (rawRole != null) {
+      if (rawRole is String && rawRole.trim().isNotEmpty) {
+        collectedRoles.add(rawRole.trim().toUpperCase());
+      } else if (rawRole is Map) {
+        final name = rawRole['name'] ?? rawRole['code'];
+        if (name != null && name.toString().trim().isNotEmpty) {
+          collectedRoles.add(name.toString().trim().toUpperCase());
+        }
+      }
+    }
+
+    // 3. Fallback / supplementary check with JWT token (just like web auth.js does)
+    final tokenToInspect = authToken ?? ApiClient().authToken;
+    final jwtRoles = _extractRolesFromJwt(tokenToInspect);
+    for (final r in jwtRoles) {
+      if (r.trim().isNotEmpty) {
+        collectedRoles.add(r.trim().toUpperCase());
+      }
+    }
+
+    // Default to CUSTOMER if no role found
+    if (collectedRoles.isEmpty) {
+      collectedRoles.add('CUSTOMER');
+    }
+
+    final parsedRoles = collectedRoles.toList();
+
+    // Determine primaryRole
     String primaryRole;
-    if (json['role'] != null && json['role'].toString().trim().isNotEmpty) {
+    if (json['role'] != null && json['role'] is String && json['role'].toString().trim().isNotEmpty) {
       primaryRole = json['role'].toString().trim().toUpperCase();
-    } else if (rolesUpper.contains('ADMIN') || rolesUpper.contains('SUPER_ADMIN') || rolesUpper.contains('ADMINISTRATOR')) {
+    } else if (collectedRoles.contains('ADMIN') ||
+        collectedRoles.contains('SUPER_ADMIN') ||
+        collectedRoles.contains('ADMINISTRATOR')) {
       primaryRole = 'ADMIN';
-    } else if (rolesUpper.contains('ORGANIZER')) {
+    } else if (collectedRoles.contains('ORGANIZER')) {
       primaryRole = 'ORGANIZER';
-    } else if (rolesUpper.contains('STAFF')) {
+    } else if (collectedRoles.contains('STAFF')) {
       primaryRole = 'STAFF';
-    } else if (rolesUpper.isNotEmpty) {
-      primaryRole = rolesUpper.first;
+    } else if (collectedRoles.isNotEmpty) {
+      primaryRole = collectedRoles.first;
     } else {
       primaryRole = 'CUSTOMER';
     }
@@ -147,12 +216,22 @@ class UserModel {
 
   bool get isAdmin => hasRole('ADMIN') || hasRole('SUPER_ADMIN') || hasRole('ADMINISTRATOR');
   bool get isOrganizer => hasRole('ORGANIZER');
-  bool get isStaff => hasRole('STAFF') || isOrganizer || isAdmin;
-  bool get isCustomer => hasRole('CUSTOMER');
+  bool get isStaff => hasRole('STAFF');
+  bool get isCustomer => hasRole('CUSTOMER') || (!isAdmin && !isOrganizer && !hasRole('STAFF'));
+
+  /// True when user ONLY has customer role without any staff/organizer/admin permissions
+  bool get isCustomerOnly => !hasRole('STAFF') && !isAdmin && !isOrganizer;
+
+  /// True when user has both Customer and Staff privileges and can switch between them
+  bool get canSwitchRoles => hasRole('STAFF') && isCustomer;
+
+  /// True when user has permission to enter Staff Portal (strictly role STAFF)
+  bool get canAccessStaff => hasRole('STAFF');
 
   String get roleDisplayName {
     if (isAdmin) return 'Quản trị viên';
     if (isOrganizer) return 'Ban tổ chức';
+    if (hasRole('STAFF') && hasRole('CUSTOMER')) return 'Khách hàng & Nhân viên';
     if (hasRole('STAFF')) return 'Nhân viên';
     return 'Khách hàng';
   }

@@ -39,7 +39,7 @@ void main() {
   });
 
   group('UserModel Roles & Authorization tests', () {
-    test('Resolves STAFF priority when roles has CUSTOMER and STAFF', () {
+    test('Resolves dual role when roles has CUSTOMER and STAFF', () {
       final json = {
         'id': 'user-1',
         'email': 'staff@example.com',
@@ -49,8 +49,13 @@ void main() {
       final user = UserModel.fromJson(json);
       expect(user.role, 'STAFF');
       expect(user.isStaff, isTrue);
+      expect(user.isCustomer, isTrue);
+      expect(user.isCustomerOnly, isFalse);
+      expect(user.canSwitchRoles, isTrue);
+      expect(user.canAccessStaff, isTrue);
       expect(user.hasRole('STAFF'), isTrue);
-      expect(user.roleDisplayName, 'Nhân viên');
+      expect(user.hasRole('CUSTOMER'), isTrue);
+      expect(user.roleDisplayName, 'Khách hàng & Nhân viên');
     });
 
     test('Resolves ORGANIZER priority when roles has CUSTOMER and ORGANIZER', () {
@@ -63,7 +68,8 @@ void main() {
       final user = UserModel.fromJson(json);
       expect(user.role, 'ORGANIZER');
       expect(user.isOrganizer, isTrue);
-      expect(user.isStaff, isTrue);
+      expect(user.isStaff, isFalse);
+      expect(user.canAccessStaff, isFalse);
       expect(user.roleDisplayName, 'Ban tổ chức');
     });
 
@@ -77,7 +83,7 @@ void main() {
       final user = UserModel.fromJson(json);
       expect(user.role, 'ADMIN');
       expect(user.isAdmin, isTrue);
-      expect(user.isStaff, isTrue);
+      expect(user.hasRole('STAFF'), isFalse);
       expect(user.roleDisplayName, 'Quản trị viên');
     });
 
@@ -92,6 +98,10 @@ void main() {
       expect(user.role, 'CUSTOMER');
       expect(user.isStaff, isFalse);
       expect(user.isCustomer, isTrue);
+      expect(user.isCustomerOnly, isTrue);
+      expect(user.canSwitchRoles, isFalse);
+      expect(user.canAccessStaff, isFalse);
+      expect(user.hasRole('STAFF'), isFalse);
       expect(user.roleDisplayName, 'Khách hàng');
     });
   });

@@ -13,6 +13,19 @@ class AuthService {
   UserModel? get currentUser => _currentUser;
   bool get isLoggedIn => _currentUser != null;
 
+  void setDemoUser({required bool isStaff}) {
+    _currentUser = UserModel(
+      id: isStaff ? 'demo-staff-01' : 'demo-cust-01',
+      email: isStaff ? 'staff.minh@eventhub.vn' : 'customer.lan@eventhub.vn',
+      fullName: isStaff ? 'Nguyễn Văn Minh' : 'Trần Mai Lan',
+      phone: '0901234567',
+      address: 'SECC, Q.7, TP.HCM',
+      city: 'TP. Hồ Chí Minh',
+      role: isStaff ? 'STAFF' : 'CUSTOMER',
+      roles: isStaff ? ['CUSTOMER', 'STAFF'] : ['CUSTOMER'],
+    );
+  }
+
   Future<Map<String, dynamic>> login({
     required String email,
     required String password,
@@ -29,7 +42,7 @@ class AuthService {
         ApiClient().setAuthToken(token);
       }
       if (data['user'] != null) {
-        _currentUser = UserModel.fromJson(data['user']);
+        _currentUser = UserModel.fromJson(data['user'], token);
       }
       return {'success': true, 'user': _currentUser, 'message': response['message'] ?? 'Đăng nhập thành công'};
     }
@@ -75,7 +88,7 @@ class AuthService {
           ApiClient().setAuthToken(token);
         }
         if (data['user'] != null) {
-          _currentUser = UserModel.fromJson(data['user']);
+          _currentUser = UserModel.fromJson(data['user'], token);
         }
         return {
           'success': true,
@@ -175,7 +188,7 @@ class AuthService {
   Future<Map<String, dynamic>> fetchProfile() async {
     final response = await ApiClient().get('/users/me');
     if (response['success'] == true && response['data'] != null) {
-      _currentUser = UserModel.fromJson(response['data']);
+      _currentUser = UserModel.fromJson(response['data'], ApiClient().authToken);
       return {'success': true, 'user': _currentUser};
     }
     return {
@@ -205,7 +218,7 @@ class AuthService {
     final response = await ApiClient().patch('/users/me', body);
 
     if (response['success'] == true && response['data'] != null) {
-      _currentUser = UserModel.fromJson(response['data']);
+      _currentUser = UserModel.fromJson(response['data'], ApiClient().authToken);
       return {
         'success': true,
         'user': _currentUser,
