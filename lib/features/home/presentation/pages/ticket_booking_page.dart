@@ -924,6 +924,19 @@ class _TicketBookingPageState extends State<TicketBookingPage> {
     final buyerEmail = _buyerEmailController.text.trim();
     final buyerPhone = _buyerPhoneController.text.trim();
 
+    if (buyerPhone.isNotEmpty) {
+      final phoneRegex = RegExp(r'^(0|\+84)(3|5|7|8|9)[0-9]{8}$');
+      if (!phoneRegex.hasMatch(buyerPhone)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Số điện thoại không đúng định dạng (VD: 0912345678).'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+        return;
+      }
+    }
+
     setState(() => _isCheckingOut = true);
 
     // Build items list

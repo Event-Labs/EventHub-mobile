@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import '../../../../core/api/auth_service.dart';
 import '../../../../core/api/events_service.dart';
 import '../../../../core/api/notifications_service.dart';
 import '../../../../core/models/event_model.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../staff/presentation/pages/staff_dashboard_page.dart';
 import '../../../ai/presentation/pages/ai_chat_page.dart';
 import '../../../favorites/presentation/pages/favorite_events_page.dart';
 import '../../../notifications/presentation/pages/notifications_page.dart';
@@ -125,29 +127,18 @@ class _HomeDiscoveryPageState extends State<HomeDiscoveryPage> {
 
   @override
   Widget build(BuildContext context) {
-    Widget bodyContent;
-    switch (_currentBottomNavIndex) {
-      case 1:
-        bodyContent = const FavoriteEventsPage();
-        break;
-      case 2:
-        bodyContent = const MyTicketsPage();
-        break;
-      case 3:
-        bodyContent = const AiChatPage();
-        break;
-      case 4:
-        bodyContent = const ProfilePage();
-        break;
-      case 0:
-      default:
-        bodyContent = _buildDiscoveryContent();
-        break;
-    }
-
     return Scaffold(
       backgroundColor: const Color(0xFF070D1E),
-      body: bodyContent,
+      body: IndexedStack(
+        index: _currentBottomNavIndex,
+        children: [
+          _buildDiscoveryContent(),
+          const FavoriteEventsPage(),
+          const MyTicketsPage(),
+          const AiChatPage(),
+          const ProfilePage(),
+        ],
+      ),
       bottomNavigationBar: _buildBottomNavBar(),
     );
   }
@@ -161,15 +152,28 @@ class _HomeDiscoveryPageState extends State<HomeDiscoveryPage> {
       filteredEvents = filteredEvents.where((e) => e.organizer?.id == _selectedOrganizerId).toList();
     }
 
+    // Single pass classification to optimize performance and prevent lag/freeze
+    final ongoingEvents = <EventModel>[];
+    final upcomingEvents = <EventModel>[];
+    final endedEvents = <EventModel>[];
+    final validEvents = <EventModel>[];
+
+    for (final e in filteredEvents) {
+      final state = _getEventTimeState(e, now);
+      if (state == 'ongoing') {
+        ongoingEvents.add(e);
+        validEvents.add(e);
+      } else if (state == 'upcoming') {
+        upcomingEvents.add(e);
+        validEvents.add(e);
+      } else {
+        endedEvents.add(e);
+      }
+    }
+
     // 2. Spotlight: ONLY events that are still valid (not ended)
-    final validEvents = filteredEvents.where((e) => _getEventTimeState(e, now) != 'ended').toList();
     final featured = validEvents.where((e) => e.isFeatured).toList();
     final displayFeatured = featured.isNotEmpty ? featured : validEvents.take(5).toList();
-
-    // 3. Classify events by time state
-    final ongoingEvents = filteredEvents.where((e) => _getEventTimeState(e, now) == 'ongoing').toList();
-    final upcomingEvents = filteredEvents.where((e) => _getEventTimeState(e, now) == 'upcoming').toList();
-    final endedEvents = filteredEvents.where((e) => _getEventTimeState(e, now) == 'ended').toList();
 
     return Scaffold(
       backgroundColor: const Color(0xFF070D1E),

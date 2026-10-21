@@ -275,4 +275,42 @@ class TicketModel {
       'session_id': sessionId,
     });
   }
+
+  TicketModel copyWith({
+    String? status,
+    String? checkInStatus,
+    String? checkInTime,
+    String? attendeeName,
+    String? attendeeEmail,
+    String? attendeePhone,
+    String? seatName,
+  }) {
+    return TicketModel(
+      ticketId: ticketId,
+      ticketCode: ticketCode,
+      qrCode: qrCode,
+      eventId: eventId,
+      eventName: eventName,
+      eventBanner: eventBanner,
+      ticketTypeId: ticketTypeId,
+      ticketType: ticketType,
+      seatName: seatName ?? this.seatName,
+      sessionId: sessionId,
+      sessionName: sessionName,
+      sessionTime: sessionTime,
+      sessionEndTime: sessionEndTime,
+      checkinStartTime: checkinStartTime,
+      status: status ?? this.status,
+      checkInStatus: checkInStatus ?? this.checkInStatus,
+      attendeeName: attendeeName ?? this.attendeeName,
+      attendeeEmail: attendeeEmail ?? this.attendeeEmail,
+      attendeePhone: attendeePhone ?? this.attendeePhone,
+      orderCode: orderCode,
+      price: price,
+      originalPrice: originalPrice,
+      checkInTime: checkInTime ?? this.checkInTime,
+      venue: venue,
+      refundPolicy: refundPolicy,
+    );
+  }
 }

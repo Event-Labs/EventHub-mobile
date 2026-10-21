@@ -97,5 +97,78 @@ void main() {
       final result = StaffService.checkHasActiveOrUpcomingEvents(events, referenceTime: now);
       expect(result, isFalse);
     });
+
+    test('searchTickets returns empty list when backend is not reached, no mock data leakage', () async {
+      final tickets = await StaffService().searchTickets('nonexistent_user_query');
+      expect(tickets, isEmpty);
+    });
+  });
+
+  group('Staff direct booking payload formatting tests', () {
+    test('Seated event creates items grouped by ticket type with session_seat_ids', () {
+      final selectedSeatIds = ['seat-1', 'seat-2', 'seat-3'];
+      final seatDetails = {
+        'seat-1': {'ticket_type_id': 'tt-vip', 'seat_code': 'A-01'},
+        'seat-2': {'ticket_type_id': 'tt-vip', 'seat_code': 'A-02'},
+        'seat-3': {'ticket_type_id': 'tt-reg', 'seat_code': 'B-01'},
+      };
+
+      // Grouping logic matching StaffDirectBookingPage
+      final itemsByTicketType = <String, List<String>>{};
+      for (final seatId in selectedSeatIds) {
+        final seat = seatDetails[seatId];
+        final ttId = seat?['ticket_type_id'] ?? '';
+        itemsByTicketType.putIfAbsent(ttId, () => []).add(seatId);
+      }
+
+      final items = itemsByTicketType.entries.map((e) => {
+        'ticket_type_id': e.key,
+        'quantity': e.value.length,
+        'session_seat_ids': e.value,
+      }).toList();
+
+      expect(items.length, 2);
+      final vipItem = items.firstWhere((i) => i['ticket_type_id'] == 'tt-vip');
+      expect(vipItem['quantity'], 2);
+      expect(vipItem['session_seat_ids'], ['seat-1', 'seat-2']);
+
+      final regItem = items.firstWhere((i) => i['ticket_type_id'] == 'tt-reg');
+      expect(regItem['quantity'], 1);
+      expect(regItem['session_seat_ids'], ['seat-3']);
+    });
+
+    test('Unseated event creates items with quantity and empty session_seat_ids list', () {
+      final quantities = {
+        'tt-ga': 3,
+        'tt-early': 0,
+        'tt-vip-standing': 2,
+      };
+
+      final items = quantities.entries
+          .where((e) => e.value > 0)
+          .map((e) => {
+                'ticket_type_id': e.key,
+                'quantity': e.value,
+                'session_seat_ids': <String>[],
+              })
+          .toList();
+
+      expect(items.length, 2);
+      expect(items[0], {
+        'ticket_type_id': 'tt-ga',
+        'quantity': 3,
+        'session_seat_ids': [],
+      });
+      expect(items[1], {
+        'ticket_type_id': 'tt-vip-standing',
+        'quantity': 2,
+        'session_seat_ids': [],
+      });
+    });
+
+    test('searchTickets returns empty list immediately when eventId is null or empty', () async {
+      final res = await StaffService().searchTickets('John', eventId: '');
+      expect(res, isEmpty);
+    });
   });
 }

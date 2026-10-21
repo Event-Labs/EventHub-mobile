@@ -47,6 +47,7 @@ class TrendingEventItem extends StatelessWidget {
                         width: 96,
                         height: 96,
                         fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(color: const Color(0xFF1E2846)),
                       ),
                     ),
                     if (isLive)

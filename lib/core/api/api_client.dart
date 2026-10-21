@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'api_config.dart';
@@ -6,6 +7,8 @@ class ApiClient {
   static final ApiClient _instance = ApiClient._internal();
   factory ApiClient() => _instance;
   ApiClient._internal();
+
+  static const Duration _timeout = Duration(seconds: 25);
 
   String? _authToken;
 
@@ -26,72 +29,194 @@ class ApiClient {
     return headers;
   }
 
+  Uri _buildUri(String path, [Map<String, String>? queryParams]) {
+    final base = ApiConfig.baseUrl;
+    String cleanPath = path.trim();
+
+    if (cleanPath.startsWith('/api/')) {
+      cleanPath = cleanPath.substring(4);
+    } else if (cleanPath == '/api') {
+      cleanPath = '';
+    } else if (cleanPath.startsWith('api/')) {
+      cleanPath = cleanPath.substring(3);
+    }
+
+    if (cleanPath.isNotEmpty && !cleanPath.startsWith('/')) {
+      cleanPath = '/$cleanPath';
+    }
+
+    Uri uri = Uri.parse('$base$cleanPath');
+    if (queryParams != null && queryParams.isNotEmpty) {
+      uri = uri.replace(queryParameters: queryParams);
+    }
+    return uri;
+  }
+
+  bool _isProbing = false;
+
+  Future<bool> _tryFindWorkingHost() async {
+    if (_isProbing) return false;
+    _isProbing = true;
+    try {
+      final candidates = ApiConfig.candidateHosts;
+      final currentHost = ApiConfig.apiHost;
+
+      for (final host in candidates) {
+        if (host == currentHost) continue;
+        try {
+          final probeUri = Uri.parse('${ApiConfig.apiProtocol}://$host:${ApiConfig.apiPort}/api/events?limit=1');
+          final response = await http.get(probeUri).timeout(const Duration(seconds: 2));
+          if (response.statusCode >= 200 && response.statusCode < 500) {
+            ApiConfig.setDynamicHost(host);
+            return true;
+          }
+        } catch (_) {}
+      }
+      return false;
+    } finally {
+      _isProbing = false;
+    }
+  }
+
   Future<dynamic> get(String path, {Map<String, String>? queryParams}) async {
     try {
-      Uri uri = Uri.parse('${ApiConfig.baseUrl}$path');
-      if (queryParams != null && queryParams.isNotEmpty) {
-        uri = uri.replace(queryParameters: queryParams);
-      }
-      final response = await http.get(uri, headers: _headers);
+      final uri = _buildUri(path, queryParams);
+      final response = await http.get(uri, headers: _headers).timeout(_timeout);
       return _processResponse(response);
     } catch (e) {
-      return {'success': false, 'message': 'Không thể kết nối máy chủ backend: $e'};
+      if (await _tryFindWorkingHost()) {
+        try {
+          final retryUri = _buildUri(path, queryParams);
+          final retryResp = await http.get(retryUri, headers: _headers).timeout(_timeout);
+          return _processResponse(retryResp);
+        } catch (retryErr) {
+          return {'success': false, 'message': 'Không thể kết nối máy chủ backend (${ApiConfig.baseUrl}): $retryErr'};
+        }
+      }
+      if (e is TimeoutException) {
+        return {'success': false, 'message': 'Kết nối máy chủ quá thời gian (Timeout)'};
+      }
+      return {'success': false, 'message': 'Không thể kết nối máy chủ backend (${ApiConfig.baseUrl}): $e'};
     }
   }
 
   Future<dynamic> post(String path, Map<String, dynamic> body) async {
     try {
-      final uri = Uri.parse('${ApiConfig.baseUrl}$path');
+      final uri = _buildUri(path);
       final response = await http.post(
         uri,
         headers: _headers,
         body: jsonEncode(body),
-      );
+      ).timeout(_timeout);
       return _processResponse(response);
     } catch (e) {
-      return {'success': false, 'message': 'Lỗi kết nối máy chủ: $e'};
+      if (await _tryFindWorkingHost()) {
+        try {
+          final retryUri = _buildUri(path);
+          final retryResp = await http.post(
+            retryUri,
+            headers: _headers,
+            body: jsonEncode(body),
+          ).timeout(_timeout);
+          return _processResponse(retryResp);
+        } catch (retryErr) {
+          return {'success': false, 'message': 'Lỗi kết nối máy chủ (${ApiConfig.baseUrl}): $retryErr'};
+        }
+      }
+      if (e is TimeoutException) {
+        return {'success': false, 'message': 'Kết nối máy chủ quá thời gian (Timeout)'};
+      }
+      return {'success': false, 'message': 'Lỗi kết nối máy chủ (${ApiConfig.baseUrl}): $e'};
     }
   }
 
   Future<dynamic> patch(String path, Map<String, dynamic> body) async {
     try {
-      final uri = Uri.parse('${ApiConfig.baseUrl}$path');
+      final uri = _buildUri(path);
       final response = await http.patch(
         uri,
         headers: _headers,
         body: jsonEncode(body),
-      );
+      ).timeout(_timeout);
       return _processResponse(response);
     } catch (e) {
-      return {'success': false, 'message': 'Lỗi kết nối máy chủ: $e'};
+      if (await _tryFindWorkingHost()) {
+        try {
+          final retryUri = _buildUri(path);
+          final retryResp = await http.patch(
+            retryUri,
+            headers: _headers,
+            body: jsonEncode(body),
+          ).timeout(_timeout);
+          return _processResponse(retryResp);
+        } catch (retryErr) {
+          return {'success': false, 'message': 'Lỗi kết nối máy chủ (${ApiConfig.baseUrl}): $retryErr'};
+        }
+      }
+      if (e is TimeoutException) {
+        return {'success': false, 'message': 'Kết nối máy chủ quá thời gian (Timeout)'};
+      }
+      return {'success': false, 'message': 'Lỗi kết nối máy chủ (${ApiConfig.baseUrl}): $e'};
     }
   }
 
   Future<dynamic> put(String path, Map<String, dynamic> body) async {
     try {
-      final uri = Uri.parse('${ApiConfig.baseUrl}$path');
+      final uri = _buildUri(path);
       final response = await http.put(
         uri,
         headers: _headers,
         body: jsonEncode(body),
-      );
+      ).timeout(_timeout);
       return _processResponse(response);
     } catch (e) {
-      return {'success': false, 'message': 'Lỗi kết nối máy chủ: $e'};
+      if (await _tryFindWorkingHost()) {
+        try {
+          final retryUri = _buildUri(path);
+          final retryResp = await http.put(
+            retryUri,
+            headers: _headers,
+            body: jsonEncode(body),
+          ).timeout(_timeout);
+          return _processResponse(retryResp);
+        } catch (retryErr) {
+          return {'success': false, 'message': 'Lỗi kết nối máy chủ (${ApiConfig.baseUrl}): $retryErr'};
+        }
+      }
+      if (e is TimeoutException) {
+        return {'success': false, 'message': 'Kết nối máy chủ quá thời gian (Timeout)'};
+      }
+      return {'success': false, 'message': 'Lỗi kết nối máy chủ (${ApiConfig.baseUrl}): $e'};
     }
   }
 
   Future<dynamic> delete(String path, {Map<String, dynamic>? body}) async {
     try {
-      final uri = Uri.parse('${ApiConfig.baseUrl}$path');
+      final uri = _buildUri(path);
       final response = await http.delete(
         uri,
         headers: _headers,
         body: body != null ? jsonEncode(body) : null,
-      );
+      ).timeout(_timeout);
       return _processResponse(response);
     } catch (e) {
-      return {'success': false, 'message': 'Lỗi kết nối máy chủ: $e'};
+      if (await _tryFindWorkingHost()) {
+        try {
+          final retryUri = _buildUri(path);
+          final retryResp = await http.delete(
+            retryUri,
+            headers: _headers,
+            body: body != null ? jsonEncode(body) : null,
+          ).timeout(_timeout);
+          return _processResponse(retryResp);
+        } catch (retryErr) {
+          return {'success': false, 'message': 'Lỗi kết nối máy chủ (${ApiConfig.baseUrl}): $retryErr'};
+        }
+      }
+      if (e is TimeoutException) {
+        return {'success': false, 'message': 'Kết nối máy chủ quá thời gian (Timeout)'};
+      }
+      return {'success': false, 'message': 'Lỗi kết nối máy chủ (${ApiConfig.baseUrl}): $e'};
     }
   }
 
