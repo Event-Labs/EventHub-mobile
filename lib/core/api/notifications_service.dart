@@ -91,40 +91,7 @@ class NotificationsService {
           : (response['data']['items'] ?? response['data']['notifications'] ?? []);
       return list.map((e) => NotificationModel.fromJson(e)).toList();
     }
-
-    // Default demonstration data
-    return [
-      NotificationModel(
-        id: 'noti-1',
-        title: 'Nhắc lịch sự kiện',
-        message: 'Sự kiện "Neon Horizon Festival 2025" sẽ bắt đầu lúc 19:30 ngày 25/10/2026 tại SECC Exhibition Center. Hãy kiểm tra vé và chuẩn bị check-in đúng giờ nhé!',
-        type: 'EVENT',
-        isRead: false,
-        createdAt: DateTime.now().subtract(const Duration(minutes: 25)).toIso8601String(),
-        eventId: 'evt-1',
-        eventTitle: 'Neon Horizon Festival 2025',
-      ),
-      NotificationModel(
-        id: 'noti-2',
-        title: 'Thanh toán thành công',
-        message: 'Đơn hàng ORD-882190 cho sự kiện "Neon Horizon Festival 2025" đã được thanh toán thành công. Vé của bạn đã sẵn sàng trong mục Vé của tôi.',
-        type: 'PAYMENT',
-        isRead: false,
-        createdAt: DateTime.now().subtract(const Duration(hours: 3)).toIso8601String(),
-        eventId: 'evt-1',
-        eventTitle: 'Neon Horizon Festival 2025',
-      ),
-      NotificationModel(
-        id: 'noti-3',
-        title: 'Nhắc lịch sự kiện',
-        message: 'Chỉ còn 24 giờ nữa sự kiện "The Nocturnal Acoustic Echoes" sẽ diễn ra. Chúc bạn có một đêm nhạc thật trọn vẹn!',
-        type: 'EVENT',
-        isRead: true,
-        createdAt: DateTime.now().subtract(const Duration(days: 2)).toIso8601String(),
-        eventId: 'evt-2',
-        eventTitle: 'The Nocturnal Acoustic Echoes',
-      ),
-    ];
+    return [];
   }
 
   Future<int> getUnreadCount() async {
@@ -136,7 +103,7 @@ class NotificationsService {
       }
       return int.tryParse(response['data'].toString()) ?? 0;
     }
-    return 1;
+    return 0;
   }
 
   Future<bool> markAsRead(String id) async {

@@ -1882,7 +1882,7 @@ class _TicketBookingPageState extends State<TicketBookingPage> {
                           Text(
                             t.formattedPrice,
                             style: TextStyle(
-                              color: isSoldOut ? Colors.white38 : const Color(0xFFFFB690),
+                              color: isSoldOut ? Colors.white38 : const Color(0xFFE6C17A),
                               fontWeight: FontWeight.bold,
                               fontSize: 15,
                             ),
@@ -3399,7 +3399,7 @@ class _TicketBookingPageState extends State<TicketBookingPage> {
                     ),
                     Text(
                       _formatCurrency(_finalPrice),
-                      style: const TextStyle(color: Color(0xFFFFB690), fontSize: 17, fontWeight: FontWeight.bold),
+                      style: const TextStyle(color: Color(0xFFE6C17A), fontSize: 17, fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
@@ -3548,7 +3548,7 @@ class _TicketBookingPageState extends State<TicketBookingPage> {
                       Text(
                         _formatCurrency(displayAmount),
                         style: const TextStyle(
-                          color: Color(0xFFFFB690),
+                          color: Color(0xFFE6C17A),
                           fontSize: 18,
                           fontWeight: FontWeight.w900,
                         ),

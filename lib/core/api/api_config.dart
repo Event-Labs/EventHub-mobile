@@ -41,7 +41,7 @@ class ApiConfig {
     return list;
   }
 
-  static bool _isDetecting = false;
+  static Future<String?>? _detectingFuture;
 
   /// Parallel probe across candidate hosts:
   /// - Detects 10.0.2.2 on Android Studio Emulator in ~5ms
@@ -55,9 +55,21 @@ class ApiConfig {
     if (!forceRefresh && _dynamicHost != null && _dynamicHost!.isNotEmpty) {
       return _dynamicHost;
     }
-    if (_isDetecting) return _dynamicHost;
-    _isDetecting = true;
+    if (_detectingFuture != null) {
+      return await _detectingFuture!;
+    }
 
+    final future = _probeCandidateHosts();
+    _detectingFuture = future;
+    try {
+      final res = await future;
+      return res ?? _dynamicHost;
+    } finally {
+      _detectingFuture = null;
+    }
+  }
+
+  static Future<String?> _probeCandidateHosts() async {
     try {
       final candidates = candidateHosts;
       final port = apiPort;
@@ -66,7 +78,7 @@ class ApiConfig {
       int pending = candidates.length;
 
       for (final host in candidates) {
-        Socket.connect(host, port, timeout: const Duration(milliseconds: 1200)).then((socket) {
+        Socket.connect(host, port, timeout: const Duration(milliseconds: 1500)).then((socket) {
           socket.destroy();
           if (!completer.isCompleted) {
             _dynamicHost = host;
@@ -81,14 +93,12 @@ class ApiConfig {
       }
 
       final result = await completer.future.timeout(
-        const Duration(milliseconds: 1400),
+        const Duration(milliseconds: 1600),
         onTimeout: () => null,
       );
       return result ?? _dynamicHost;
     } catch (_) {
       return _dynamicHost;
-    } finally {
-      _isDetecting = false;
     }
   }
 
@@ -123,7 +133,7 @@ class ApiConfig {
       return 'localhost';
     }
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-      return '127.0.0.1'; // USB default host; auto-probes 192.168.1.174 & 10.0.2.2 if unreachable
+      return '10.0.2.2'; // Default host for Android Emulator; auto-probes 127.0.0.1 & 192.168.1.174
     }
     return 'localhost';
   }

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../../../core/api/api_client.dart';
 import '../../../../core/api/auth_service.dart';
-import '../../../../core/api/staff_service.dart';
 import '../../../../core/models/user_model.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../auth/presentation/pages/login_page.dart';
@@ -23,7 +23,6 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   bool _isLoading = false;
-  bool _hasActiveStaffEvents = false;
 
   @override
   void initState() {
@@ -33,17 +32,19 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<void> _fetchLatestProfile() async {
     if (AuthService().currentUser == null) {
+      if (ApiClient().authToken == null || ApiClient().authToken!.isEmpty) {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+        return;
+      }
       setState(() => _isLoading = true);
     }
     await AuthService().fetchProfile();
-    final user = AuthService().currentUser;
-    bool hasActive = false;
-    if (user != null && user.isStaff) {
-      hasActive = true;
-    }
     if (mounted) {
       setState(() {
-        _hasActiveStaffEvents = hasActive;
         _isLoading = false;
       });
     }
@@ -118,14 +119,14 @@ class _ProfilePageState extends State<ProfilePage> {
                 title: const Text('Thông báo sự kiện sắp diễn ra', style: TextStyle(color: Colors.white, fontSize: 14)),
                 subtitle: const Text('Nhắc nhở lịch chiếu & check-in vé', style: TextStyle(color: AppColors.secondary, fontSize: 11)),
                 value: true,
-                activeColor: AppColors.primaryContainer,
+                activeThumbColor: AppColors.primaryContainer,
                 onChanged: (_) {},
               ),
               SwitchListTile(
                 title: const Text('Ưu đãi & Khuyến mãi hot', style: TextStyle(color: Colors.white, fontSize: 14)),
                 subtitle: const Text('Cập nhật mã giảm giá vé từ EventHub', style: TextStyle(color: AppColors.secondary, fontSize: 11)),
                 value: true,
-                activeColor: AppColors.primaryContainer,
+                activeThumbColor: AppColors.primaryContainer,
                 onChanged: (_) {},
               ),
               const SizedBox(height: 16),
@@ -181,15 +182,17 @@ class _ProfilePageState extends State<ProfilePage> {
           'Hồ Sơ Cá Nhân',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.edit_outlined, color: AppColors.primaryContainer),
-            tooltip: 'Chỉnh sửa',
-            onPressed: _openEditProfile,
-          ),
-        ],
+        actions: user != null
+            ? [
+                IconButton(
+                  icon: const Icon(Icons.edit_outlined, color: AppColors.primaryContainer),
+                  tooltip: 'Chỉnh sửa',
+                  onPressed: _openEditProfile,
+                ),
+              ]
+            : null,
       ),
-      body: _isLoading && user == null
+      body: _isLoading && user == null && (ApiClient().authToken?.isNotEmpty ?? false)
           ? const Center(
               child: CircularProgressIndicator(color: AppColors.primaryContainer),
             )
@@ -200,10 +203,136 @@ class _ProfilePageState extends State<ProfilePage> {
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.all(20),
-                child: Column(
-                  children: [
+                child: user == null
+                    ? _buildGuestView()
+                    : _buildAuthenticatedView(user, avatarUrl),
+              ),
+            ),
+    );
+  }
 
-              // User Header Profile Card
+  Widget _buildGuestView() {
+    return Column(
+      children: [
+        // Guest Header Card với nút Đăng Nhập / Đăng Ký
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF0F1B47), Color(0xFF0C1446)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: AppColors.primaryContainer.withValues(alpha: 0.3),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.3),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              Container(
+                width: 88,
+                height: 88,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Color(0xFF132252),
+                ),
+                child: const Icon(
+                  Icons.person_outline_rounded,
+                  color: Color(0xFFE6C17A),
+                  size: 46,
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Khách Hàng EventHub',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Đăng nhập để xem vé, quản lý tài khoản và nhận các ưu đãi hấp dẫn.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.65),
+                  fontSize: 13,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Container(
+                width: double.infinity,
+                height: 48,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFC99A47), Color(0xFFE6C17A)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFC99A47).withValues(alpha: 0.35),
+                      blurRadius: 16,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(24),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const LoginPage()),
+                      ).then((_) {
+                        if (mounted) _fetchLatestProfile();
+                      });
+                    },
+                    child: const Center(
+                      child: Text(
+                        'Đăng Nhập / Đăng Ký',
+                        style: TextStyle(
+                          color: Color(0xFF0D1B2A),
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        // Khi chưa đăng ký/đăng nhập: chỉ hiển thị mỗi "Trợ giúp & Hỗ trợ"
+        _buildProfileOption(
+          icon: Icons.help_outline,
+          title: 'Trợ giúp & Hỗ trợ',
+          subtitle: 'Điều khoản sử dụng & liên hệ hỗ trợ',
+          onTap: _showHelpSupport,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAuthenticatedView(UserModel user, String avatarUrl) {
+    return Column(
+      children: [
+        // User Header Profile Card
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(20),
@@ -214,10 +343,10 @@ class _ProfilePageState extends State<ProfilePage> {
                     end: Alignment.bottomRight,
                   ),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AppColors.primaryContainer.withOpacity(0.3)),
+                  border: Border.all(color: AppColors.primaryContainer.withValues(alpha: 0.3)),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.3),
+                      color: Colors.black.withValues(alpha: 0.3),
                       blurRadius: 12,
                       offset: const Offset(0, 4),
                     ),
@@ -233,7 +362,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           backgroundImage: avatarUrl.isNotEmpty ? NetworkImage(avatarUrl) : null,
                           child: avatarUrl.isEmpty
                               ? Text(
-                                  user?.fullName.isNotEmpty == true ? user!.fullName[0].toUpperCase() : 'U',
+                                  user.fullName.isNotEmpty ? user.fullName[0].toUpperCase() : 'U',
                                   style: const TextStyle(color: Colors.white, fontSize: 36, fontWeight: FontWeight.bold),
                                 )
                               : null,
@@ -257,12 +386,12 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
                     const SizedBox(height: 14),
                     Text(
-                      user?.fullName ?? 'Khách Hàng EventHub',
+                      user.fullName.isNotEmpty ? user.fullName : 'Khách Hàng EventHub',
                       style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      user?.email ?? '',
+                      user.email,
                       style: const TextStyle(color: AppColors.secondary, fontSize: 13),
                     ),
                     const SizedBox(height: 10),
@@ -277,16 +406,16 @@ class _ProfilePageState extends State<ProfilePage> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                           decoration: BoxDecoration(
-                            color: AppColors.primaryContainer.withOpacity(0.15),
+                            color: AppColors.primaryContainer.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: AppColors.primaryContainer.withOpacity(0.5)),
+                            border: Border.all(color: AppColors.primaryContainer.withValues(alpha: 0.5)),
                           ),
                           child: Text(
-                            (user?.roleDisplayName ?? user?.role ?? 'Khách hàng').toUpperCase(),
+                            user.roleDisplayName.toUpperCase(),
                             style: const TextStyle(color: AppColors.primaryContainer, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.8),
                           ),
                         ),
-                        if (user != null && user.canSwitchRoles)
+                        if (user.canSwitchRoles)
                           InkWell(
                             onTap: () {
                               if (widget.isStaffPortal) {
@@ -331,7 +460,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       ],
                     ),
 
-                    if (user?.bio != null && user!.bio!.isNotEmpty) ...[
+                    if (user.bio != null && user.bio!.isNotEmpty) ...[
                       const SizedBox(height: 14),
                       Text(
                         '"${user.bio}"',
@@ -350,7 +479,7 @@ class _ProfilePageState extends State<ProfilePage> {
               const SizedBox(height: 24),
 
               // Profile Options Menu (Role switch option ONLY visible if user has both roles / canSwitchRoles)
-              if (user != null && user.canSwitchRoles) ...[
+              if (user.canSwitchRoles) ...[
                 if (widget.isStaffPortal)
                   _buildProfileOption(
                     icon: Icons.storefront_outlined,
@@ -433,8 +562,8 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
               _buildProfileOption(
                 icon: Icons.lock_outline,
-                title: user?.hasPassword == false ? 'Thiết lập mật khẩu' : 'Đổi mật khẩu',
-                subtitle: user?.hasPassword == false
+                title: !user.hasPassword ? 'Thiết lập mật khẩu' : 'Đổi mật khẩu',
+                subtitle: !user.hasPassword
                     ? 'Tạo mật khẩu để đăng nhập bằng email'
                     : 'Cập nhật mật khẩu bảo mật tài khoản',
                 onTap: _openChangePassword,
@@ -466,30 +595,27 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
               ),
               const SizedBox(height: 30),
-            ],
-          ),
-        ),
-      ),
+      ],
     );
   }
 
-  Widget _buildUserDetailItems(UserModel? user) {
+  Widget _buildUserDetailItems(UserModel user) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: const Color(0xFF0C1446),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.secondary.withOpacity(0.1)),
+        border: Border.all(color: AppColors.secondary.withValues(alpha: 0.1)),
       ),
       child: Column(
         children: [
-          _buildInfoRow(Icons.phone_outlined, 'Số điện thoại', user?.phone ?? 'Chưa cập nhật'),
+          _buildInfoRow(Icons.phone_outlined, 'Số điện thoại', user.phone ?? 'Chưa cập nhật'),
           const Divider(color: Colors.white10, height: 16),
-          _buildInfoRow(Icons.cake_outlined, 'Ngày sinh', user?.formattedDob ?? 'Chưa cập nhật'),
+          _buildInfoRow(Icons.cake_outlined, 'Ngày sinh', user.formattedDob),
           const Divider(color: Colors.white10, height: 16),
-          _buildInfoRow(Icons.location_city_outlined, 'Tỉnh / Thành phố', user?.city ?? 'Chưa cập nhật'),
+          _buildInfoRow(Icons.location_city_outlined, 'Tỉnh / Thành phố', user.city ?? 'Chưa cập nhật'),
           const Divider(color: Colors.white10, height: 16),
-          _buildInfoRow(Icons.home_outlined, 'Địa chỉ', user?.address ?? 'Chưa cập nhật'),
+          _buildInfoRow(Icons.home_outlined, 'Địa chỉ', user.address ?? 'Chưa cập nhật'),
         ],
       ),
     );
@@ -533,7 +659,7 @@ class _ProfilePageState extends State<ProfilePage> {
         decoration: BoxDecoration(
           color: const Color(0xFF0C1446),
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.secondary.withOpacity(0.1)),
+          border: Border.all(color: AppColors.secondary.withValues(alpha: 0.1)),
         ),
         child: Row(
           children: [

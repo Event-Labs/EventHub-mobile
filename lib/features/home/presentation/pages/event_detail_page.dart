@@ -747,7 +747,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
                                               Text(
                                                 ticket.formattedPrice,
                                                 style: const TextStyle(
-                                                  color: Color(0xFFFFB690),
+                                                  color: Color(0xFFE6C17A),
                                                   fontSize: 14,
                                                   fontWeight: FontWeight.bold,
                                                 ),
@@ -1077,7 +1077,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
                   Text(
                     event.formattedPrice,
                     style: const TextStyle(
-                      color: Color(0xFFFFB690),
+                      color: Color(0xFFE6C17A),
                       fontSize: 18,
                       fontWeight: FontWeight.w900,
                     ),

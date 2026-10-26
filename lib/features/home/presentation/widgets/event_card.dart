@@ -191,7 +191,7 @@ class EventCardWidget extends StatelessWidget {
                   Text(
                     event.formattedPrice,
                     style: TextStyle(
-                      color: const Color(0xFFFFB690),
+                      color: const Color(0xFFE6C17A),
                       fontSize: compact ? 13 : 15,
                       fontWeight: FontWeight.w800,
                     ),

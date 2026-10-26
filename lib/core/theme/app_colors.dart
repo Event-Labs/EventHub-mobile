@@ -2,9 +2,14 @@ import 'package:flutter/material.dart';
 
 class AppColors {
   static const Color background = Color(0xFF0A1328);
-  static const Color primary = Color(0xFFFFB690);
-  static const Color primaryContainer = Color(0xFFF97316);
-  static const Color onPrimary = Color(0xFF552100);
+  static const Color primary = Color(0xFFE6C17A); // Gold light
+  static const Color primaryContainer = Color(0xFFC99A47); // Gold primary
+  static const Color onPrimary = Color(0xFF0D1B2A);
+  
+  // Brand Gold Palette
+  static const Color gold = Color(0xFFC99A47);
+  static const Color goldLight = Color(0xFFE6C17A);
+  static const List<Color> goldGradient = [Color(0xFFC99A47), Color(0xFFE6C17A)];
   
   static const Color secondary = Color(0xFFB0CADD);
   static const Color secondaryContainer = Color(0xFF334C5C);
