@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import '../../../../core/api/auth_service.dart';
 import '../../../../core/api/tickets_service.dart';
+import '../../../auth/presentation/pages/login_page.dart';
 import '../../../../core/models/ticket_model.dart';
 import '../../../../core/theme/app_colors.dart';
 import 'ticket_detail_page.dart';
@@ -30,7 +32,11 @@ class _MyTicketsPageState extends State<MyTicketsPage> {
   @override
   void initState() {
     super.initState();
-    _loadTickets();
+    if (AuthService().currentUser != null && AuthService().isLoggedIn) {
+      _loadTickets();
+    } else {
+      _isLoading = false;
+    }
   }
 
   Future<void> _loadTickets() async {
@@ -184,6 +190,98 @@ class _MyTicketsPageState extends State<MyTicketsPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (AuthService().currentUser == null || !AuthService().isLoggedIn) {
+      return Scaffold(
+        backgroundColor: const Color(0xFF070D1E),
+        appBar: AppBar(
+          backgroundColor: const Color(0xFF070D1E),
+          surfaceTintColor: Colors.transparent,
+          elevation: 0,
+          title: const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Vé Của Tôi',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20),
+              ),
+              Text(
+                'Quản lý vé đã mua & mã QR check-in',
+                style: TextStyle(color: Color(0xFF8B9CB5), fontSize: 11),
+              ),
+            ],
+          ),
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF101932),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                  ),
+                  child: const Icon(Icons.confirmation_number_outlined, color: Color(0xFFE6C17A), size: 48),
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  'Vui lòng đăng nhập để xem và quản lý vé đã mua của bạn.',
+                  style: TextStyle(color: Color(0xFFB0CADD), fontSize: 14),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                Container(
+                  height: 48,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFC99A47), Color(0xFFE6C17A)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFFC99A47).withValues(alpha: 0.35),
+                        blurRadius: 16,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(24),
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const LoginPage()),
+                        ).then((_) {
+                          if (mounted && AuthService().currentUser != null) {
+                            _loadTickets();
+                          }
+                        });
+                      },
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 28),
+                        child: Center(
+                          child: Text(
+                            'Đăng Nhập Ngay',
+                            style: TextStyle(color: Color(0xFF0D1B2A), fontWeight: FontWeight.bold, fontSize: 15),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     final tickets = _filteredTickets;
 
     return Scaffold(
@@ -205,14 +303,6 @@ class _MyTicketsPageState extends State<MyTicketsPage> {
             ),
           ],
         ),
-        actions: [
-          IconButton(
-            onPressed: _loadTickets,
-            icon: const Icon(Icons.refresh, color: Color(0xFFB0CADD)),
-            tooltip: 'Làm mới',
-          ),
-          const SizedBox(width: 4),
-        ],
       ),
       body: Column(
         children: [
@@ -332,7 +422,7 @@ class _MyTicketsPageState extends State<MyTicketsPage> {
                       ),
                       Text(
                         ticket.formattedPrice,
-                        style: const TextStyle(color: Color(0xFFFFB690), fontSize: 15, fontWeight: FontWeight.bold),
+                        style: const TextStyle(color: Color(0xFFE6C17A), fontSize: 15, fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),

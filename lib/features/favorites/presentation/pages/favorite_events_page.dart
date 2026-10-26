@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import '../../../../core/api/auth_service.dart';
 import '../../../../core/api/events_service.dart';
+import '../../../auth/presentation/pages/login_page.dart';
 import '../../../../core/models/event_model.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../home/presentation/pages/event_detail_page.dart';
@@ -19,7 +21,11 @@ class _FavoriteEventsPageState extends State<FavoriteEventsPage> {
   @override
   void initState() {
     super.initState();
-    _loadFavorites();
+    if (AuthService().currentUser != null && AuthService().isLoggedIn) {
+      _loadFavorites();
+    } else {
+      _isLoading = false;
+    }
   }
 
   Future<void> _loadFavorites() async {
@@ -49,9 +55,98 @@ class _FavoriteEventsPageState extends State<FavoriteEventsPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (AuthService().currentUser == null || !AuthService().isLoggedIn) {
+      return Scaffold(
+        backgroundColor: const Color(0xFF070D1E),
+        appBar: AppBar(
+          automaticallyImplyLeading: false,
+          backgroundColor: const Color(0xFF070D1E),
+          surfaceTintColor: Colors.transparent,
+          elevation: 0,
+          title: const Text(
+            'Sự kiện Yêu thích',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 20,
+            ),
+          ),
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF101932),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                  ),
+                  child: const Icon(Icons.favorite_border, color: Color(0xFFE6C17A), size: 48),
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  'Vui lòng đăng nhập để xem danh sách sự kiện yêu thích của bạn.',
+                  style: TextStyle(color: Color(0xFFB0CADD), fontSize: 14),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                Container(
+                  height: 48,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFC99A47), Color(0xFFE6C17A)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFFC99A47).withValues(alpha: 0.35),
+                        blurRadius: 16,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(24),
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const LoginPage()),
+                        ).then((_) {
+                          if (mounted && AuthService().currentUser != null) {
+                            _loadFavorites();
+                          }
+                        });
+                      },
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 28),
+                        child: Center(
+                          child: Text(
+                            'Đăng Nhập Ngay',
+                            style: TextStyle(color: Color(0xFF0D1B2A), fontWeight: FontWeight.bold, fontSize: 15),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFF070D1E),
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         backgroundColor: const Color(0xFF070D1E),
         surfaceTintColor: Colors.transparent,
         elevation: 0,

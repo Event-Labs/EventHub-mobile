@@ -113,7 +113,7 @@ class _MyRefundsPageState extends State<MyRefundsPage> {
                                 const Text('Số tiền hoàn dự kiến:', style: TextStyle(color: Color(0xFF8B9CB5), fontSize: 12)),
                                 Text(
                                   formatter.format(item.refundAmount > 0 ? item.refundAmount : item.amount),
-                                  style: const TextStyle(color: Color(0xFFFFB690), fontSize: 15, fontWeight: FontWeight.bold),
+                                  style: const TextStyle(color: Color(0xFFE6C17A), fontSize: 15, fontWeight: FontWeight.bold),
                                 ),
                               ],
                             ),

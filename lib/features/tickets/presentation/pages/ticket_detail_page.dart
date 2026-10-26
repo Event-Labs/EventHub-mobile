@@ -3,9 +3,11 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../../../../core/api/refunds_service.dart';
 import '../../../../core/api/tickets_service.dart';
+import '../../../../core/constants/banks.dart';
 import '../../../../core/models/ticket_model.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../feedback/presentation/pages/feedback_page.dart';
@@ -381,11 +383,16 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
   }
 
   void _showRefundModal(TicketModel ticket) {
-    final reasonController = TextEditingController();
-    final bankController = TextEditingController();
+    final noteController = TextEditingController();
     final accountController = TextEditingController();
     final accountNameController = TextEditingController();
+
+    String selectedReason = 'Trùng lịch cá nhân';
+    BankItem? selectedBank;
     bool isSubmitting = false;
+    bool previewLoading = true;
+    Map<String, dynamic>? previewData;
+    String? previewError;
 
     showModalBottomSheet(
       context: context,
@@ -393,98 +400,742 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
       backgroundColor: Colors.transparent,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setModalState) {
+          // Initialize preview on first render
+          if (previewLoading && previewData == null && previewError == null) {
+            RefundsService().getRefundPreview(ticketId: ticket.ticketId).then((res) {
+              if (ctx.mounted) {
+                setModalState(() {
+                  previewLoading = false;
+                  if (res['success'] == true && res['data'] != null) {
+                    previewData = res['data'] as Map<String, dynamic>;
+                  } else {
+                    previewError = res['message']?.toString() ?? 'Không thể lấy thông tin tính toán hoàn tiền.';
+                  }
+                });
+              }
+            }).catchError((err) {
+              if (ctx.mounted) {
+                setModalState(() {
+                  previewLoading = false;
+                  previewError = 'Không thể kiểm tra chính sách hoàn tiền.';
+                });
+              }
+            });
+          }
+
+          final originalPrice = ticket.originalPrice ?? ticket.price ?? 0.0;
+          final actualPaid = (previewData != null && previewData!['paid_amount'] != null)
+              ? (double.tryParse(previewData!['paid_amount'].toString()) ?? ticket.price ?? originalPrice)
+              : (ticket.price ?? originalPrice);
+          final discountAmount = originalPrice > actualPaid ? originalPrice - actualPaid : 0.0;
+          final isEligible = previewData == null || previewData!['eligible'] == true;
+          final currencyFormat = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ', decimalDigits: 0);
+
           return Container(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.9,
+            ),
             padding: EdgeInsets.only(
-              top: 24,
-              left: 20,
-              right: 20,
-              bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+              bottom: MediaQuery.of(context).viewInsets.bottom,
             ),
             decoration: const BoxDecoration(
-              color: Color(0xFF0F1A38),
+              color: Color(0xFF0F172A),
               borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+              border: Border(top: BorderSide(color: Colors.white12)),
             ),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 44,
-                      height: 4,
-                      decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
-                    ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Top drag handle
+                const SizedBox(height: 12),
+                Center(
+                  child: Container(
+                    width: 44,
+                    height: 4,
+                    decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
                   ),
-                  const SizedBox(height: 20),
-                  const Text('Yêu Cầu Hoàn Vé', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Mã vé: ${ticket.ticketCode} (${ticket.ticketType ?? "Vé tham dự"})',
-                    style: const TextStyle(color: Color(0xFFB0CADD), fontSize: 13),
+                ),
+
+                // Header
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 14, 16, 12),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFC99A47).withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFE6C17A).withValues(alpha: 0.3)),
+                        ),
+                        child: const Icon(Icons.rotate_left, color: Color(0xFFE6C17A), size: 20),
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Yêu cầu hoàn tiền vé',
+                              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                            ),
+                            SizedBox(height: 2),
+                            Text(
+                              'Xem trước thông tin hoàn tiền & gửi yêu cầu đến BTC',
+                              style: TextStyle(color: Color(0xFF8B9CB5), fontSize: 11),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.white70, size: 20),
+                        onPressed: () => Navigator.pop(ctx),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 20),
+                ),
+                const Divider(color: Colors.white10, height: 1),
 
-                  _buildModalTextField('Tên ngân hàng (Vietcombank, MB, Techcombank...)', bankController),
-                  const SizedBox(height: 12),
-                  _buildModalTextField('Số tài khoản nhận tiền hoàn', accountController, keyboardType: TextInputType.number),
-                  const SizedBox(height: 12),
-                  _buildModalTextField('Tên chủ tài khoản (viết hoa không dấu)', accountNameController),
-                  const SizedBox(height: 12),
-                  _buildModalTextField('Lý do yêu cầu hoàn vé', reasonController, maxLines: 3),
-
-                  const SizedBox(height: 24),
-                  ElevatedButton(
-                    onPressed: isSubmitting
-                        ? null
-                        : () async {
-                            final bank = bankController.text.trim();
-                            final acc = accountController.text.trim();
-                            final accName = accountNameController.text.trim();
-                            final reason = reasonController.text.trim();
-
-                            if (bank.isEmpty || acc.isEmpty || accName.isEmpty || reason.isEmpty) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Vui lòng điền đầy đủ thông tin hoàn vé'), backgroundColor: AppColors.error),
-                              );
-                              return;
-                            }
-
-                            final messenger = ScaffoldMessenger.of(context);
-                            setModalState(() => isSubmitting = true);
-                            final res = await RefundsService().submitRefundRequest(
-                              ticketId: ticket.ticketId,
-                              reason: reason,
-                              bankName: bank,
-                              bankAccountNumber: acc,
-                              bankAccountName: accName,
-                            );
-                            setModalState(() => isSubmitting = false);
-
-                            messenger.showSnackBar(
-                              SnackBar(
-                                content: Text(res['message'] ?? 'Đã gửi yêu cầu hoàn vé'),
-                                backgroundColor: res['success'] == true ? Colors.green : AppColors.error,
+                // Scrollable content
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // 1. Ticket Summary Card (matching Web)
+                        Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.03),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const Text(
+                                          'SỰ KIỆN',
+                                          style: TextStyle(
+                                            color: Color(0xFFE6C17A),
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w900,
+                                            letterSpacing: 1.1,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 3),
+                                        Text(
+                                          ticket.eventName,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF06B6D4).withValues(alpha: 0.12),
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(color: const Color(0xFF06B6D4).withValues(alpha: 0.3)),
+                                    ),
+                                    child: Text(
+                                      ticket.ticketCode,
+                                      style: const TextStyle(
+                                        color: Color(0xFF06B6D4),
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
-                            );
-                            if (ctx.mounted) {
-                              Navigator.pop(ctx);
-                            }
-                            if (mounted) {
-                              _loadTicket();
-                            }
-                          },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primaryContainer,
-                      minimumSize: const Size(double.infinity, 48),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 10),
+                                child: Divider(color: Colors.white.withValues(alpha: 0.08), height: 1),
+                              ),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _buildTicketInfoRow('Hạng vé:', ticket.ticketType ?? 'Vé tiêu chuẩn'),
+                                  ),
+                                  Expanded(
+                                    child: _buildTicketInfoRow(
+                                      'Mã đơn:',
+                                      '#${ticket.orderCode ?? (ticket.ticketId.length >= 8 ? ticket.ticketId.substring(0, 8) : ticket.ticketId)}',
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _buildTicketInfoRow('Giá gốc:', currencyFormat.format(originalPrice)),
+                                  ),
+                                  if (discountAmount > 0)
+                                    Expanded(
+                                      child: _buildTicketInfoRow(
+                                        'Khuyến mãi:',
+                                        '-${currencyFormat.format(discountAmount)}',
+                                        valueColor: const Color(0xFF34D399),
+                                      ),
+                                    )
+                                  else
+                                    Expanded(
+                                      child: _buildTicketInfoRow(
+                                        'Thực tế đã trả:',
+                                        currencyFormat.format(actualPaid),
+                                        valueColor: const Color(0xFFE6C17A),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              if (discountAmount > 0) ...[
+                                const SizedBox(height: 8),
+                                _buildTicketInfoRow(
+                                  'Thực tế đã trả:',
+                                  currencyFormat.format(actualPaid),
+                                  valueColor: const Color(0xFFE6C17A),
+                                ),
+                              ],
+                              if (ticket.sessionTime != null && ticket.sessionTime!.isNotEmpty) ...[
+                                const SizedBox(height: 8),
+                                _buildTicketInfoRow('Thời gian:', ticket.sessionTime!),
+                              ],
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+
+                        // 2. Refund Preview State / Loading / Calculated Result
+                        if (previewLoading)
+                          Container(
+                            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 14),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.02),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                            ),
+                            child: const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFE6C17A)),
+                                ),
+                                SizedBox(width: 12),
+                                Flexible(
+                                  child: Text(
+                                    'Đang kiểm tra chính sách và tính toán số tiền hoàn...',
+                                    style: TextStyle(color: Color(0xFF8B9CB5), fontSize: 12),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        else if (previewError != null)
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF43F5E).withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: const Color(0xFFF43F5E).withValues(alpha: 0.3)),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Không thể tải thông tin xem trước:',
+                                  style: TextStyle(color: Color(0xFFFDA4AF), fontWeight: FontWeight.bold, fontSize: 12),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  previewError!,
+                                  style: const TextStyle(color: Color(0xFFFECDD3), fontSize: 11),
+                                ),
+                              ],
+                            ),
+                          )
+                        else if (previewData != null) ...[
+                          // Days before & Refund Rate
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.02),
+                                    borderRadius: BorderRadius.circular(14),
+                                    border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text('Thời gian trước sự kiện', style: TextStyle(color: Color(0xFF8B9CB5), fontSize: 11)),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        previewData!['days_before_event'] != null
+                                            ? '${previewData!['days_before_event']} ngày'
+                                            : 'N/A',
+                                        style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.02),
+                                    borderRadius: BorderRadius.circular(14),
+                                    border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text('Tỷ lệ hoàn áp dụng', style: TextStyle(color: Color(0xFF8B9CB5), fontSize: 11)),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        '${previewData!['refund_rate'] ?? 0}%',
+                                        style: const TextStyle(color: Color(0xFF34D399), fontSize: 14, fontWeight: FontWeight.bold),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+
+                          // Proposed Refund Amount Highlight
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.35)),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text(
+                                  'Số tiền hoàn đề xuất:',
+                                  style: TextStyle(color: Color(0xFF6EE7B7), fontWeight: FontWeight.bold, fontSize: 13),
+                                ),
+                                Text(
+                                  currencyFormat.format(previewData!['refund_amount'] ?? 0),
+                                  style: const TextStyle(
+                                    color: Color(0xFF34D399),
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          // Ineligible Notice if not eligible
+                          if (!isEligible) ...[
+                            const SizedBox(height: 10),
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF43F5E).withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: const Color(0xFFF43F5E).withValues(alpha: 0.35)),
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Icon(Icons.error_outline, color: Color(0xFFF43F5E), size: 18),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const Text(
+                                          'Không đủ điều kiện hoàn vé',
+                                          style: TextStyle(color: Color(0xFFFDA4AF), fontWeight: FontWeight.bold, fontSize: 12),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          previewData!['reason']?.toString() ?? 'Vé này hiện không đủ điều kiện hoàn vé theo quy định.',
+                                          style: const TextStyle(color: Color(0xFFFECDD3), fontSize: 11),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+
+                          // Event refund policy text
+                          if (previewData!['policy_text'] != null &&
+                              previewData!['policy_text'].toString().trim().isNotEmpty) ...[
+                            const SizedBox(height: 10),
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF06B6D4).withValues(alpha: 0.08),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: const Color(0xFF06B6D4).withValues(alpha: 0.25)),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Chính sách hoàn vé của sự kiện:',
+                                    style: TextStyle(color: Color(0xFF67E8F9), fontWeight: FontWeight.bold, fontSize: 12),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    previewData!['policy_text'].toString(),
+                                    style: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 11, height: 1.35),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
+                        const SizedBox(height: 16),
+
+                        // 3. Reason Section (Dropdown + Note)
+                        Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.25),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Row(
+                                children: [
+                                  Text('Lý do hoàn vé ', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+                                  Text('*', style: TextStyle(color: Color(0xFFF43F5E), fontSize: 13, fontWeight: FontWeight.bold)),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 14),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF070D1E),
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(color: Colors.white12),
+                                ),
+                                child: DropdownButtonHideUnderline(
+                                  child: DropdownButton<String>(
+                                    value: selectedReason,
+                                    isExpanded: true,
+                                    dropdownColor: const Color(0xFF0F172A),
+                                    icon: const Icon(Icons.keyboard_arrow_down, color: Color(0xFFE6C17A)),
+                                    style: const TextStyle(color: Color(0xFFF5EBDD), fontSize: 13, fontWeight: FontWeight.w500),
+                                    items: const [
+                                      DropdownMenuItem(value: 'Trùng lịch cá nhân', child: Text('Trùng lịch cá nhân')),
+                                      DropdownMenuItem(value: 'Sự kiện thay đổi thông tin', child: Text('Sự kiện thay đổi thông tin')),
+                                      DropdownMenuItem(value: 'Mua nhầm vé', child: Text('Mua nhầm vé')),
+                                      DropdownMenuItem(value: 'Lý do sức khỏe', child: Text('Lý do sức khỏe')),
+                                      DropdownMenuItem(value: 'Khác', child: Text('Khác')),
+                                    ],
+                                    onChanged: (val) {
+                                      if (val != null) {
+                                        setModalState(() => selectedReason = val);
+                                      }
+                                    },
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  const Text('Ghi chú chi tiết ', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+                                  if (selectedReason == 'Khác')
+                                    const Text('*', style: TextStyle(color: Color(0xFFF43F5E), fontSize: 13, fontWeight: FontWeight.bold)),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF070D1E),
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(color: Colors.white12),
+                                ),
+                                child: TextField(
+                                  controller: noteController,
+                                  maxLines: 3,
+                                  maxLength: 500,
+                                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                                  decoration: InputDecoration(
+                                    hintText: selectedReason == 'Khác'
+                                        ? 'Vui lòng nêu rõ lý do hoàn vé (bắt buộc)...'
+                                        : 'Thông tin bổ sung (nếu có, tối đa 500 ký tự)...',
+                                    hintStyle: const TextStyle(color: Color(0xFF8B9CB5), fontSize: 12),
+                                    border: InputBorder.none,
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                    counterStyle: const TextStyle(color: Colors.white38, fontSize: 10),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // 4. Bank Information Section
+                        Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.02),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Row(
+                                children: [
+                                  Text(
+                                    'Tài khoản ngân hàng nhận tiền hoàn ',
+                                    style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                                  ),
+                                  Text('*', style: TextStyle(color: Color(0xFFF43F5E), fontSize: 13, fontWeight: FontWeight.bold)),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+
+                              // Bank Picker Trigger
+                              InkWell(
+                                onTap: () {
+                                  _showBankPickerDialog(context, (bank) {
+                                    setModalState(() => selectedBank = bank);
+                                  });
+                                },
+                                borderRadius: BorderRadius.circular(14),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF070D1E),
+                                    borderRadius: BorderRadius.circular(14),
+                                    border: Border.all(color: Colors.white12),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.account_balance_outlined, color: Color(0xFFE6C17A), size: 18),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Text(
+                                          selectedBank != null ? selectedBank!.displayName : '-- Chọn ngân hàng * --',
+                                          style: TextStyle(
+                                            color: selectedBank != null ? const Color(0xFFF5EBDD) : const Color(0xFF8B9CB5),
+                                            fontSize: 13,
+                                            fontWeight: selectedBank != null ? FontWeight.w500 : FontWeight.normal,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      const Icon(Icons.keyboard_arrow_down, color: Color(0xFFE6C17A), size: 20),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+
+                              // Account Number
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF070D1E),
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(color: Colors.white12),
+                                ),
+                                child: TextField(
+                                  controller: accountController,
+                                  keyboardType: TextInputType.number,
+                                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                                  decoration: const InputDecoration(
+                                    hintText: 'Số tài khoản *',
+                                    hintStyle: TextStyle(color: Color(0xFF8B9CB5), fontSize: 12),
+                                    border: InputBorder.none,
+                                    contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+
+                              // Account Holder Name
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF070D1E),
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(color: Colors.white12),
+                                ),
+                                child: TextField(
+                                  controller: accountNameController,
+                                  textCapitalization: TextCapitalization.characters,
+                                  inputFormatters: [
+                                    TextInputFormatter.withFunction((oldValue, newValue) {
+                                      return newValue.copyWith(
+                                        text: newValue.text.toUpperCase(),
+                                        selection: newValue.selection,
+                                      );
+                                    }),
+                                  ],
+                                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                                  decoration: const InputDecoration(
+                                    hintText: 'Tên chủ tài khoản (viết hoa không dấu) *',
+                                    hintStyle: TextStyle(color: Color(0xFF8B9CB5), fontSize: 12),
+                                    border: InputBorder.none,
+                                    contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                      ],
                     ),
-                    child: isSubmitting
-                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                        : const Text('Gửi Yêu Cầu Hoàn Tiền', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                   ),
-                ],
-              ),
+                ),
+
+                // Footer Buttons (matching Web)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF0A1124),
+                    border: Border(top: BorderSide(color: Colors.white10)),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: Colors.white24),
+                            minimumSize: const Size(0, 46),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                          ),
+                          child: const Text('Hủy', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        flex: 2,
+                        child: ElevatedButton(
+                          onPressed: (isSubmitting || previewLoading || !isEligible)
+                              ? null
+                              : () async {
+                                  if (selectedBank == null) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Vui lòng chọn ngân hàng nhận tiền hoàn'),
+                                        backgroundColor: AppColors.error,
+                                      ),
+                                    );
+                                    return;
+                                  }
+
+                                  final acc = accountController.text.trim();
+                                  final accName = accountNameController.text.trim();
+                                  final note = noteController.text.trim();
+
+                                  if (acc.isEmpty || accName.isEmpty) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Vui lòng nhập đầy đủ số tài khoản và tên chủ tài khoản'),
+                                        backgroundColor: AppColors.error,
+                                      ),
+                                    );
+                                    return;
+                                  }
+
+                                  if (selectedReason == 'Khác' && note.isEmpty) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Vui lòng nhập ghi chú chi tiết khi chọn lý do "Khác"'),
+                                        backgroundColor: AppColors.error,
+                                      ),
+                                    );
+                                    return;
+                                  }
+
+                                  final messenger = ScaffoldMessenger.of(context);
+                                  setModalState(() => isSubmitting = true);
+
+                                  final res = await RefundsService().submitRefundRequest(
+                                    ticketId: ticket.ticketId,
+                                    reason: selectedReason,
+                                    customerNote: note,
+                                    bankName: selectedBank!.displayName,
+                                    bankAccountNumber: acc,
+                                    bankAccountName: accName.toUpperCase(),
+                                  );
+
+                                  setModalState(() => isSubmitting = false);
+
+                                  messenger.showSnackBar(
+                                    SnackBar(
+                                      content: Text(res['message'] ?? 'Đã gửi yêu cầu hoàn vé'),
+                                      backgroundColor: res['success'] == true ? const Color(0xFF22C55E) : AppColors.error,
+                                      duration: const Duration(seconds: 4),
+                                    ),
+                                  );
+
+                                  if (ctx.mounted) {
+                                    Navigator.pop(ctx);
+                                  }
+                                  if (mounted) {
+                                    _loadTicket();
+                                  }
+                                },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFE6C17A),
+                            disabledBackgroundColor: Colors.white12,
+                            minimumSize: const Size(0, 46),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                            elevation: 0,
+                          ),
+                          child: isSubmitting
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF070D1E)),
+                                )
+                              : Text(
+                                  isSubmitting ? 'Đang gửi...' : 'Gửi yêu cầu',
+                                  style: TextStyle(
+                                    color: (isSubmitting || previewLoading || !isEligible)
+                                        ? Colors.white38
+                                        : const Color(0xFF070D1E),
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           );
         },
@@ -492,25 +1143,133 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
     );
   }
 
-  Widget _buildModalTextField(String label, TextEditingController controller, {int maxLines = 1, TextInputType? keyboardType}) {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF16254F),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white12),
-      ),
-      child: TextField(
-        controller: controller,
-        maxLines: maxLines,
-        keyboardType: keyboardType,
-        style: const TextStyle(color: Colors.white, fontSize: 13),
-        decoration: InputDecoration(
-          hintText: label,
-          hintStyle: const TextStyle(color: Color(0xFF8B9CB5), fontSize: 12),
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+  Widget _buildTicketInfoRow(String label, String value, {Color? valueColor}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(color: Color(0xFF8B9CB5), fontSize: 11)),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: TextStyle(
+            color: valueColor ?? Colors.white,
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
-      ),
+      ],
+    );
+  }
+
+  void _showBankPickerDialog(BuildContext context, ValueChanged<BankItem> onSelected) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        String search = '';
+        return StatefulBuilder(
+          builder: (context, setPickerState) {
+            final filtered = vietnameseBanks.where((b) {
+              final q = search.toLowerCase().trim();
+              if (q.isEmpty) return true;
+              return b.shortName.toLowerCase().contains(q) ||
+                  b.code.toLowerCase().contains(q) ||
+                  b.fullName.toLowerCase().contains(q);
+            }).toList();
+
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.75,
+              decoration: const BoxDecoration(
+                color: Color(0xFF0F172A),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                border: Border(top: BorderSide(color: Colors.white12)),
+              ),
+              child: Column(
+                children: [
+                  const SizedBox(height: 12),
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Chọn ngân hàng thụ hưởng',
+                          style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, color: Colors.white70, size: 20),
+                          onPressed: () => Navigator.pop(ctx),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF16254F),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: Colors.white12),
+                      ),
+                      child: TextField(
+                        autofocus: false,
+                        style: const TextStyle(color: Colors.white, fontSize: 13),
+                        decoration: const InputDecoration(
+                          hintText: 'Tìm kiếm ngân hàng (VCB, MB, Techcombank...)',
+                          hintStyle: TextStyle(color: Color(0xFF8B9CB5), fontSize: 12),
+                          prefixIcon: Icon(Icons.search, color: Color(0xFF8B9CB5), size: 18),
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        ),
+                        onChanged: (val) => setPickerState(() => search = val),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Expanded(
+                    child: ListView.separated(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      itemCount: filtered.length,
+                      separatorBuilder: (_, __) => const Divider(color: Colors.white10, height: 1),
+                      itemBuilder: (context, index) {
+                        final bank = filtered[index];
+                        return ListTile(
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                          title: Text(
+                            bank.shortName,
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                          ),
+                          subtitle: Text(
+                            '${bank.code} - ${bank.fullName}',
+                            style: const TextStyle(color: Color(0xFF8B9CB5), fontSize: 11),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          trailing: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white24, size: 13),
+                          onTap: () {
+                            onSelected(bank);
+                            Navigator.pop(ctx);
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -549,8 +1308,14 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
             tooltip: 'Đặt nhắc nhở',
           ),
           IconButton(
-            onPressed: _showDownloadChoiceModal,
-            icon: const Icon(Icons.download, color: Colors.white),
+            onPressed: _isDownloading ? null : _showDownloadChoiceModal,
+            icon: _isDownloading
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  )
+                : const Icon(Icons.download, color: Colors.white),
             tooltip: 'Tải vé về máy',
           ),
           const SizedBox(width: 4),
@@ -610,7 +1375,7 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
                               ),
                               Text(
                                 ticket.formattedPrice,
-                                style: const TextStyle(color: Color(0xFFFFB690), fontSize: 17, fontWeight: FontWeight.bold),
+                                style: const TextStyle(color: Color(0xFFE6C17A), fontSize: 17, fontWeight: FontWeight.bold),
                               ),
                             ],
                           ),
@@ -758,43 +1523,9 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
               ),
             ),
 
-            const SizedBox(height: 24),
-
             // Action Buttons
-            // 1. Download Ticket Button
-            ElevatedButton.icon(
-              onPressed: _isDownloading ? null : _showDownloadChoiceModal,
-              icon: _isDownloading
-                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : const Icon(Icons.download, color: Colors.white),
-              label: Text(
-                _isDownloading ? 'Đang chuẩn bị tệp...' : 'Tải Vé Về Thiết Bị (PNG / SVG)',
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primaryContainer,
-                minimumSize: const Size(double.infinity, 48),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              ),
-            ),
-
-            const SizedBox(height: 12),
-
-            // 2. Event Reminder Button
-            OutlinedButton.icon(
-              onPressed: () => _showReminderModal(ticket),
-              icon: const Icon(Icons.alarm_on, color: Color(0xFF06B6D4), size: 18),
-              label: const Text('Nhận Nhắc Nhở Trước Sự Kiện', style: TextStyle(color: Color(0xFF06B6D4), fontWeight: FontWeight.bold)),
-              style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: Color(0xFF06B6D4)),
-                minimumSize: const Size(double.infinity, 46),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              ),
-            ),
-
-            // 3. Feedback button (Function 24)
             if (ticket.isUsed) ...[
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
               ElevatedButton.icon(
                 onPressed: () {
                   Navigator.push(
@@ -814,9 +1545,8 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
               ),
             ],
 
-            // 4. Refund button (Function 20)
             if (ticket.isValid && !ticket.isUsed && !ticket.isRefundPending) ...[
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
               OutlinedButton.icon(
                 onPressed: () => _showRefundModal(ticket),
                 icon: const Icon(Icons.replay, color: Color(0xFFE6C17A), size: 18),

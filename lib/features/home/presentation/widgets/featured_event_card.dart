@@ -61,6 +61,7 @@ class FeaturedEventCard extends StatelessWidget {
                       child: Image.network(
                         'https://lh3.googleusercontent.com/aida-public/AB6AXuCsh1MyeOrExv0OTGWPXymZBnHdDiqnLogqJTML1O6osQPpeQP11Xa069TLuCwM-qYBI6xOmazp-7pg5MCxPM4TcaDHr7rhFP7PRyR7QS79TjINZdZ4k4DfgPm1umU1TYFb7w-_8bpoVl9R1VTWzNVop69NIQAPIhcnx8LZ1FDgsJ4ME58mNas6uSxXTAiSOwUKbbgiKBdEG1KIhXlEOKa-7pEzLNe1z7_DJbEJhZKSIizd6czYP7-3',
                         fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(color: const Color(0xFF1E2846)),
                       ),
                     ),
                   ),
