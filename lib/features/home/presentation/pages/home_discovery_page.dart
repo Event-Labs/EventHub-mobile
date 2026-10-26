@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../../../core/api/auth_service.dart';
+import '../../../auth/presentation/pages/login_page.dart';
 import '../../../../core/api/events_service.dart';
 import '../../../../core/api/notifications_service.dart';
 import '../../../../core/models/event_model.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../staff/presentation/pages/staff_dashboard_page.dart';
 import '../../../ai/presentation/pages/ai_chat_page.dart';
 import '../../../favorites/presentation/pages/favorite_events_page.dart';
 import '../../../notifications/presentation/pages/notifications_page.dart';
@@ -178,20 +178,26 @@ class _HomeDiscoveryPageState extends State<HomeDiscoveryPage> {
     return Scaffold(
       backgroundColor: const Color(0xFF070D1E),
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         backgroundColor: const Color(0xFF070D1E),
         surfaceTintColor: Colors.transparent,
         elevation: 0,
-        title: ShaderMask(
-          shaderCallback: (bounds) => const LinearGradient(
-            colors: [Color(0xFFFFB690), Color(0xFFE6C17A)],
-          ).createShader(bounds),
-          child: const Text(
-            'EventHub',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w800,
-              fontSize: 24,
-              letterSpacing: -0.5,
+        title: Image.asset(
+          'assets/splash/logo_header.png',
+          height: 22,
+          fit: BoxFit.contain,
+          errorBuilder: (_, __, ___) => ShaderMask(
+            shaderCallback: (bounds) => const LinearGradient(
+              colors: [Color(0xFFC99A47), Color(0xFFE6C17A)],
+            ).createShader(bounds),
+            child: const Text(
+              'EventHub',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w800,
+                fontSize: 24,
+                letterSpacing: -0.5,
+              ),
             ),
           ),
         ),
@@ -213,6 +219,20 @@ class _HomeDiscoveryPageState extends State<HomeDiscoveryPage> {
               IconButton(
                 icon: const Icon(Icons.notifications_none, color: Colors.white, size: 24),
                 onPressed: () {
+                  if (AuthService().currentUser == null || !AuthService().isLoggedIn) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const LoginPage()),
+                    ).then((_) {
+                      if (mounted && AuthService().currentUser != null) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const NotificationsPage()),
+                        );
+                      }
+                    });
+                    return;
+                  }
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (_) => const NotificationsPage()),
@@ -229,13 +249,13 @@ class _HomeDiscoveryPageState extends State<HomeDiscoveryPage> {
                     child: Container(
                       padding: const EdgeInsets.all(4),
                       decoration: const BoxDecoration(
-                        color: AppColors.primaryContainer,
+                        gradient: LinearGradient(colors: [Color(0xFFC99A47), Color(0xFFE6C17A)]),
                         shape: BoxShape.circle,
                       ),
                       constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
                       child: Text(
                         '$_unreadNotiCount',
-                        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                        style: const TextStyle(color: Color(0xFF070D1E), fontSize: 10, fontWeight: FontWeight.bold),
                         textAlign: TextAlign.center,
                       ),
                     ),
@@ -283,17 +303,33 @@ class _HomeDiscoveryPageState extends State<HomeDiscoveryPage> {
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                             decoration: BoxDecoration(
-                              color: isSelected ? AppColors.primaryContainer : const Color(0xFF101932),
+                              gradient: isSelected
+                                  ? const LinearGradient(
+                                      colors: [Color(0xFFC99A47), Color(0xFFE6C17A)],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    )
+                                  : null,
+                              color: isSelected ? null : const Color(0xFF101932),
                               borderRadius: BorderRadius.circular(20),
                               border: Border.all(
-                                color: isSelected ? AppColors.primaryContainer : Colors.white.withOpacity(0.08),
+                                color: isSelected ? const Color(0xFFE6C17A) : Colors.white.withValues(alpha: 0.08),
                               ),
+                              boxShadow: isSelected
+                                  ? [
+                                      BoxShadow(
+                                        color: const Color(0xFFC99A47).withValues(alpha: 0.35),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ]
+                                  : null,
                             ),
                             child: Center(
                               child: Text(
                                 cat.name,
                                 style: TextStyle(
-                                  color: isSelected ? Colors.white : const Color(0xFFDAE2FF),
+                                  color: isSelected ? const Color(0xFF070D1E) : const Color(0xFFDAE2FF),
                                   fontSize: 13,
                                   fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                                 ),
@@ -378,10 +414,10 @@ class _HomeDiscoveryPageState extends State<HomeDiscoveryPage> {
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                   decoration: BoxDecoration(
-                                    gradient: const LinearGradient(colors: [Color(0xFFF97316), Color(0xFFE6C17A)]),
+                                    gradient: const LinearGradient(colors: [Color(0xFFC99A47), Color(0xFFE6C17A)]),
                                     borderRadius: BorderRadius.circular(14),
                                   ),
-                                  child: const Text('SPOTLIGHT', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                                  child: const Text('SPOTLIGHT', style: TextStyle(color: Color(0xFF070D1E), fontSize: 10, fontWeight: FontWeight.bold)),
                                 ),
                               ),
                               Positioned(
@@ -621,10 +657,10 @@ class _HomeDiscoveryPageState extends State<HomeDiscoveryPage> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primaryContainer.withOpacity(0.2) : const Color(0xFF101932),
+          color: isSelected ? const Color(0xFFC99A47).withValues(alpha: 0.2) : const Color(0xFF101932),
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
-            color: isSelected ? AppColors.primaryContainer : Colors.white.withOpacity(0.08),
+            color: isSelected ? const Color(0xFFE6C17A) : Colors.white.withValues(alpha: 0.08),
             width: isSelected ? 1.5 : 1,
           ),
         ),
@@ -642,7 +678,7 @@ class _HomeDiscoveryPageState extends State<HomeDiscoveryPage> {
             Text(
               label,
               style: TextStyle(
-                color: isSelected ? Colors.white : const Color(0xFFB0CADD),
+                color: isSelected ? const Color(0xFFE6C17A) : const Color(0xFFB0CADD),
                 fontSize: 12,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
               ),
@@ -783,14 +819,26 @@ class _HomeDiscoveryPageState extends State<HomeDiscoveryPage> {
       ),
       child: NavigationBar(
         selectedIndex: _currentBottomNavIndex,
-        onDestinationSelected: (idx) => setState(() => _currentBottomNavIndex = idx),
+        onDestinationSelected: (idx) {
+          if ((idx == 1 || idx == 2) && (AuthService().currentUser == null || !AuthService().isLoggedIn)) {
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const LoginPage()),
+            ).then((_) {
+              if (mounted && AuthService().currentUser != null) {
+                setState(() => _currentBottomNavIndex = idx);
+              }
+            });
+            return;
+          }
+          setState(() => _currentBottomNavIndex = idx);
+        },
         backgroundColor: Colors.transparent,
-        indicatorColor: AppColors.primaryContainer.withOpacity(0.2),
+        indicatorColor: const Color(0xFFC99A47).withValues(alpha: 0.25),
         elevation: 0,
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.explore_outlined, color: Color(0xFF8B9CB5)),
-            selectedIcon: Icon(Icons.explore, color: AppColors.primaryContainer),
+            selectedIcon: Icon(Icons.explore, color: Color(0xFFE6C17A)),
             label: 'Khám phá',
           ),
           NavigationDestination(
@@ -800,17 +848,17 @@ class _HomeDiscoveryPageState extends State<HomeDiscoveryPage> {
           ),
           NavigationDestination(
             icon: Icon(Icons.confirmation_number_outlined, color: Color(0xFF8B9CB5)),
-            selectedIcon: Icon(Icons.confirmation_number, color: AppColors.primaryContainer),
+            selectedIcon: Icon(Icons.confirmation_number, color: Color(0xFFE6C17A)),
             label: 'Vé của tôi',
           ),
           NavigationDestination(
             icon: Icon(Icons.auto_awesome_outlined, color: Color(0xFF8B9CB5)),
-            selectedIcon: Icon(Icons.auto_awesome, color: Color(0xFF06B6D4)),
+            selectedIcon: Icon(Icons.auto_awesome, color: Color(0xFFE6C17A)),
             label: 'Trợ lý AI',
           ),
           NavigationDestination(
             icon: Icon(Icons.person_outline, color: Color(0xFF8B9CB5)),
-            selectedIcon: Icon(Icons.person, color: AppColors.primaryContainer),
+            selectedIcon: Icon(Icons.person, color: Color(0xFFE6C17A)),
             label: 'Tài khoản',
           ),
         ],

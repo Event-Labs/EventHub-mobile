@@ -1375,7 +1375,7 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
                               ),
                               Text(
                                 ticket.formattedPrice,
-                                style: const TextStyle(color: Color(0xFFFFB690), fontSize: 17, fontWeight: FontWeight.bold),
+                                style: const TextStyle(color: Color(0xFFE6C17A), fontSize: 17, fontWeight: FontWeight.bold),
                               ),
                             ],
                           ),

@@ -4,9 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'core/api/api_config.dart';
 import 'core/theme/app_theme.dart';
-import 'features/auth/presentation/pages/login_page.dart';
 import 'features/auth/presentation/pages/verify_email_page.dart';
 import 'features/auth/presentation/pages/reset_password_page.dart';
+import 'features/splash/presentation/pages/splash_page.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -134,7 +134,7 @@ class _EventHubAppState extends State<EventHubApp> {
           child: child ?? const SizedBox.shrink(),
         );
       },
-      home: const LoginPage(),
+      home: const SplashPage(),
     );
   }
 }

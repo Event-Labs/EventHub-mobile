@@ -12,19 +12,7 @@ class AuthService {
 
   UserModel? get currentUser => _currentUser;
   bool get isLoggedIn => _currentUser != null;
-
-  void setDemoUser({required bool isStaff}) {
-    _currentUser = UserModel(
-      id: isStaff ? 'demo-staff-01' : 'demo-cust-01',
-      email: isStaff ? 'staff.minh@eventhub.vn' : 'customer.lan@eventhub.vn',
-      fullName: isStaff ? 'Nguyễn Văn Minh' : 'Trần Mai Lan',
-      phone: '0901234567',
-      address: 'SECC, Q.7, TP.HCM',
-      city: 'TP. Hồ Chí Minh',
-      role: isStaff ? 'STAFF' : 'CUSTOMER',
-      roles: isStaff ? ['CUSTOMER', 'STAFF'] : ['CUSTOMER'],
-    );
-  }
+  void setDemoUser({required bool isStaff}) {}
 
   Future<Map<String, dynamic>> login({
     required String email,

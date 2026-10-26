@@ -35,14 +35,7 @@ class FeedbacksService {
       final List list = response['data'] is List ? response['data'] : [];
       return list.map((e) => EligibleFeedbackEventModel.fromJson(e)).toList();
     }
-    return [
-      EligibleFeedbackEventModel(
-        id: 'evt-2',
-        title: 'The Nocturnal Acoustic Echoes',
-        bannerUrl: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=1200&q=80',
-        date: '03/01/2026',
-      ),
-    ];
+    return [];
   }
 
   Future<Map<String, dynamic>> submitFeedback({

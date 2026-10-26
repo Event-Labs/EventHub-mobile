@@ -27,7 +27,7 @@ class _AiChatPageState extends State<AiChatPage> {
 
   final List<String> _quickPrompts = [
     'Sự kiện hot nhất tuần này?',
-    'Tôi muốn đặt vé xem Neon Horizon Festival',
+    'Các sự kiện hot sắp diễn ra?',
     'Hướng dẫn check-in QR tại cổng?',
     'Chính sách hoàn tiền vé thế nào?',
     'Phương thức thanh toán được hỗ trợ?',
