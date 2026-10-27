@@ -8,6 +8,7 @@ import '../../../../core/api/auth_service.dart';
 import '../../../../core/api/events_service.dart';
 import '../../../../core/api/staff_service.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_background.dart';
 import '../../../home/presentation/pages/payment_page.dart';
 import '../../../home/presentation/pages/ticket_booking_page.dart';
 
@@ -971,22 +972,17 @@ class _StaffDirectBookingPageState extends State<StaffDirectBookingPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF081126),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF0C1446),
-        elevation: 0,
+    return AppBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Row(
-          children: [
-            Icon(Icons.point_of_sale, color: AppColors.primaryContainer, size: 22),
-            SizedBox(width: 8),
-            Text('Bán Vé Tại Quầy', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-          ],
-        ),
+        title: const Text('Bán Vé Tại Quầy', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
         actions: [
           Container(
             margin: const EdgeInsets.only(right: 12, top: 10, bottom: 10),
@@ -1018,7 +1014,7 @@ class _StaffDirectBookingPageState extends State<StaffDirectBookingPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // Step 1: Selected Event Card
-                        _buildSectionHeader('1. SỰ KIỆN ÁP DỤNG', Icons.festival_outlined),
+                        _buildSectionHeader('1. SỰ KIỆN ÁP DỤNG'),
                         const SizedBox(height: 8),
                         _buildEventCard(),
 
@@ -1026,20 +1022,19 @@ class _StaffDirectBookingPageState extends State<StaffDirectBookingPage> {
                         // Step 2: Select Ticket Types & Seats / Layout Map
                         _buildSectionHeader(
                           _hasSeatMap ? '2. SƠ ĐỒ CHỌN GHẾ NGỒI' : '2. SƠ ĐỒ SỰ KIỆN & CHỌN VÉ',
-                          _hasSeatMap ? Icons.event_seat_rounded : Icons.confirmation_number_outlined,
                         ),
                         const SizedBox(height: 8),
                         _buildTicketTypesList(),
 
                         const SizedBox(height: 24),
                         // Step 3: Customer Information
-                        _buildSectionHeader('3. THÔNG TIN KHÁCH HÀNG', Icons.person_outline),
+                        _buildSectionHeader('3. THÔNG TIN KHÁCH HÀNG'),
                         const SizedBox(height: 8),
                         _buildCustomerForm(),
 
                         const SizedBox(height: 24),
                         // Step 4: Payment Method
-                        _buildSectionHeader('4. PHƯƠNG THỨC THANH TOÁN', Icons.payments_outlined),
+                        _buildSectionHeader('4. PHƯƠNG THỨC THANH TOÁN'),
                         const SizedBox(height: 8),
                         _buildPaymentMethodSelector(),
 
@@ -1051,6 +1046,7 @@ class _StaffDirectBookingPageState extends State<StaffDirectBookingPage> {
                     ),
                   ),
                 ),
+      ),
     );
   }
 
@@ -1100,21 +1096,15 @@ class _StaffDirectBookingPageState extends State<StaffDirectBookingPage> {
     );
   }
 
-  Widget _buildSectionHeader(String title, IconData icon) {
-    return Row(
-      children: [
-        Icon(icon, color: AppColors.primaryContainer, size: 18),
-        const SizedBox(width: 8),
-        Text(
-          title,
-          style: const TextStyle(
-            color: AppColors.secondary,
-            fontSize: 12,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 1,
-          ),
-        ),
-      ],
+  Widget _buildSectionHeader(String title) {
+    return Text(
+      title,
+      style: const TextStyle(
+        color: Color(0xFFE6C17A),
+        fontSize: 12,
+        fontWeight: FontWeight.bold,
+        letterSpacing: 1,
+      ),
     );
   }
 
@@ -2535,36 +2525,51 @@ class _StaffDirectBookingPageState extends State<StaffDirectBookingPage> {
           SizedBox(
             width: double.infinity,
             height: 52,
-            child: ElevatedButton(
-              onPressed: _isSubmitting ? null : _handleDirectBooking,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primaryContainer,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                elevation: 4,
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFC99A47), Color(0xFFE6C17A)],
+                ),
+                borderRadius: BorderRadius.circular(14),
               ),
-              child: _isSubmitting
-                  ? const CircularProgressIndicator(color: Colors.white)
-                  : Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          _paymentMethod == 'bank_transfer' ? Icons.qr_code_2 : Icons.point_of_sale,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        Flexible(
-                          child: Text(
-                            _paymentMethod == 'bank_transfer'
-                                ? 'TẠO MÃ THANH TOÁN (PAYOS)'
-                                : 'XÁC NHẬN BÁN VÉ TẠI QUẦY',
-                            textAlign: TextAlign.center,
-                            softWrap: true,
-                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 0.3),
+              child: ElevatedButton(
+                onPressed: _isSubmitting ? null : _handleDirectBooking,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  shadowColor: Colors.transparent,
+                  foregroundColor: const Color(0xFF0D1B2A),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  elevation: 0,
+                ),
+                child: _isSubmitting
+                    ? const CircularProgressIndicator(color: Color(0xFF0D1B2A))
+                    : Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            _paymentMethod == 'bank_transfer' ? Icons.qr_code_2 : Icons.point_of_sale,
+                            size: 20,
+                            color: const Color(0xFF0D1B2A),
                           ),
-                        ),
-                      ],
-                    ),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              _paymentMethod == 'bank_transfer'
+                                  ? 'TẠO MÃ THANH TOÁN (PAYOS)'
+                                  : 'XÁC NHẬN BÁN VÉ TẠI QUẦY',
+                              textAlign: TextAlign.center,
+                              softWrap: true,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.3,
+                                color: Color(0xFF0D1B2A),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+              ),
             ),
           ),
         ],

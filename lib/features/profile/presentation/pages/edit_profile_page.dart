@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/api/auth_service.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_background.dart';
 import 'package:eventhub_mobile/core/models/user_model.dart';
 
 class EditProfilePage extends StatefulWidget {
@@ -143,9 +144,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
   Widget build(BuildContext context) {
     final avatarUrl = _avatarUrlController.text.trim();
 
-    return Scaffold(
-      backgroundColor: const Color(0xFF081126),
-      appBar: AppBar(
+    return AppBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
@@ -308,7 +310,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
           ),
         ],
       ),
-    );
+    ),
+  );
   }
 
   Widget _buildTextField({

@@ -14,7 +14,11 @@ class RefundRequestModel {
   final String? bankName;
   final String? bankAccountNumber;
   final String? bankAccountName;
+  final String? organizerNote;
+  final String? proofUrl;
+  final String? transactionRef;
   final String? createdAt;
+  final String? refundedAt;
 
   RefundRequestModel({
     required this.id,
@@ -29,7 +33,11 @@ class RefundRequestModel {
     this.bankName,
     this.bankAccountNumber,
     this.bankAccountName,
+    this.organizerNote,
+    this.proofUrl,
+    this.transactionRef,
     this.createdAt,
+    this.refundedAt,
   });
 
   factory RefundRequestModel.fromJson(Map<String, dynamic> json) {
@@ -38,7 +46,7 @@ class RefundRequestModel {
       ticketId: json['ticket_id']?.toString(),
       ticketCode: json['ticket_code']?.toString() ?? (json['ticket'] is Map ? json['ticket']['ticket_code']?.toString() : null),
       eventTitle: json['event_title']?.toString() ?? (json['event'] is Map ? json['event']['title']?.toString() : null),
-      amount: json['amount'] != null ? double.tryParse(json['amount'].toString()) ?? 0 : 0,
+      amount: json['amount'] != null ? double.tryParse(json['amount'].toString()) ?? 0 : (json['ticket'] is Map && json['ticket']['unit_price'] != null ? double.tryParse(json['ticket']['unit_price'].toString()) ?? 0 : 0),
       refundFee: json['refund_fee'] != null ? double.tryParse(json['refund_fee'].toString()) ?? 0 : 0,
       refundAmount: json['refund_amount'] != null ? double.tryParse(json['refund_amount'].toString()) ?? 0 : 0,
       status: json['status']?.toString().toUpperCase() ?? 'PENDING',
@@ -46,20 +54,31 @@ class RefundRequestModel {
       bankName: json['bank_name']?.toString(),
       bankAccountNumber: json['bank_account_number']?.toString(),
       bankAccountName: json['bank_account_name']?.toString(),
-      createdAt: json['created_at']?.toString(),
+      organizerNote: json['organizer_note']?.toString(),
+      proofUrl: json['proof_url']?.toString(),
+      transactionRef: json['transaction_ref']?.toString(),
+      createdAt: json['created_at']?.toString() ?? json['requested_at']?.toString(),
+      refundedAt: json['refunded_at']?.toString(),
     );
   }
 
   String get statusText {
-    switch (status) {
+    switch (status.toUpperCase()) {
       case 'PENDING':
+      case 'REFUND_REQUESTED':
+      case 'REFUND_PENDING':
         return 'Chờ xử lý';
       case 'APPROVED':
         return 'Đã chấp thuận';
-      case 'REJECTED':
-        return 'Bị từ chối';
+      case 'PROCESSING':
+        return 'Đang hoàn tiền';
+      case 'REFUNDED':
       case 'COMPLETED':
         return 'Đã hoàn tiền';
+      case 'REJECTED':
+        return 'Bị từ chối';
+      case 'FAILED':
+        return 'Thất bại';
       default:
         return status;
     }

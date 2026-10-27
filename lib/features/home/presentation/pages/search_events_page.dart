@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/api/events_service.dart';
 import '../../../../core/models/event_model.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_background.dart';
 import '../widgets/event_card.dart';
 import 'event_detail_page.dart';
 
@@ -813,11 +814,12 @@ class _SearchEventsPageState extends State<SearchEventsPage> {
   Widget build(BuildContext context) {
     final hasActiveFilter = _isFilterActive;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFF070D1E),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF070D1E),
-        elevation: 0,
+    return AppBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
           onPressed: () => Navigator.pop(context),
@@ -1007,7 +1009,8 @@ class _SearchEventsPageState extends State<SearchEventsPage> {
           ),
         ],
       ),
-    );
+    ),
+  );
   }
 
   // =========================================================

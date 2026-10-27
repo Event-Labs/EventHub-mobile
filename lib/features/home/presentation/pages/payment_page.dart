@@ -5,6 +5,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/api/orders_service.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_background.dart';
 import '../../../tickets/presentation/pages/my_tickets_page.dart';
 
 class PaymentPage extends StatefulWidget {
@@ -371,11 +372,12 @@ class _PaymentPageState extends State<PaymentPage> {
           _handleCancel();
         }
       },
-      child: Scaffold(
-        backgroundColor: const Color(0xFF070D1E),
-        appBar: AppBar(
-          backgroundColor: const Color(0xFF0C1446),
-          elevation: 0,
+      child: AppBackground(
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18),
             onPressed: isExpired ? () => Navigator.pop(context) : _handleCancel,
@@ -705,7 +707,8 @@ class _PaymentPageState extends State<PaymentPage> {
         ),
       ),
     ),
-  );
+  ),
+);
 }
 
   Widget _buildDetailRow(String label, String value, {bool isHighlight = false, bool isMonospace = false, String? statusTone}) {

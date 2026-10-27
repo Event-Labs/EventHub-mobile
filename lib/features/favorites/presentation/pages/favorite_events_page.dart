@@ -57,10 +57,10 @@ class _FavoriteEventsPageState extends State<FavoriteEventsPage> {
   Widget build(BuildContext context) {
     if (AuthService().currentUser == null || !AuthService().isLoggedIn) {
       return Scaffold(
-        backgroundColor: const Color(0xFF070D1E),
+        backgroundColor: Colors.transparent,
         appBar: AppBar(
           automaticallyImplyLeading: false,
-          backgroundColor: const Color(0xFF070D1E),
+          backgroundColor: Colors.transparent,
           surfaceTintColor: Colors.transparent,
           elevation: 0,
           title: const Text(
@@ -144,10 +144,10 @@ class _FavoriteEventsPageState extends State<FavoriteEventsPage> {
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFF070D1E),
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        backgroundColor: const Color(0xFF070D1E),
+        backgroundColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         title: const Text(

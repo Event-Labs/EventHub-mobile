@@ -4,6 +4,7 @@ import '../../../../core/api/auth_service.dart';
 import '../../../../core/api/events_service.dart';
 import '../../../../core/models/event_model.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_background.dart';
 import 'ticket_booking_page.dart';
 
 class EventDetailPage extends StatefulWidget {
@@ -259,8 +260,9 @@ class _EventDetailPageState extends State<EventDetailPage> {
       orElse: () => event.sessions.isNotEmpty ? event.sessions.first : EventSessionModel(id: ''),
     );
 
-    return Scaffold(
-      backgroundColor: const Color(0xFF070D1E),
+    return AppBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
       body: Stack(
         children: [
           // Scrollable Content
@@ -310,7 +312,8 @@ class _EventDetailPageState extends State<EventDetailPage> {
           _buildBottomActionBar(event, selectedSession, isExpired),
         ],
       ),
-    );
+    ),
+  );
   }
 
   // ==========================================
