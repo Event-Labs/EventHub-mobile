@@ -5,6 +5,7 @@ import '../../../../core/api/events_service.dart';
 import '../../../../core/api/notifications_service.dart';
 import '../../../../core/models/event_model.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_background.dart';
 import '../../../ai/presentation/pages/ai_chat_page.dart';
 import '../../../favorites/presentation/pages/favorite_events_page.dart';
 import '../../../notifications/presentation/pages/notifications_page.dart';
@@ -127,19 +128,21 @@ class _HomeDiscoveryPageState extends State<HomeDiscoveryPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF070D1E),
-      body: IndexedStack(
-        index: _currentBottomNavIndex,
-        children: [
-          _buildDiscoveryContent(),
-          const FavoriteEventsPage(),
-          const MyTicketsPage(),
-          const AiChatPage(),
-          const ProfilePage(),
-        ],
+    return AppBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: IndexedStack(
+          index: _currentBottomNavIndex,
+          children: [
+            _buildDiscoveryContent(),
+            const FavoriteEventsPage(),
+            const MyTicketsPage(),
+            const AiChatPage(),
+            const ProfilePage(),
+          ],
+        ),
+        bottomNavigationBar: _buildBottomNavBar(),
       ),
-      bottomNavigationBar: _buildBottomNavBar(),
     );
   }
 
@@ -176,10 +179,10 @@ class _HomeDiscoveryPageState extends State<HomeDiscoveryPage> {
     final displayFeatured = featured.isNotEmpty ? featured : validEvents.take(5).toList();
 
     return Scaffold(
-      backgroundColor: const Color(0xFF070D1E),
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        backgroundColor: const Color(0xFF070D1E),
+        backgroundColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         title: Image.asset(
@@ -710,7 +713,7 @@ class _HomeDiscoveryPageState extends State<HomeDiscoveryPage> {
     if (_statusFilter == 'ended') {
       return [
         _buildSectionHeader('Đã Kết Thúc', endedEvents.length, const Color(0xFF94A3B8)),
-        _buildEventsColumn(endedEvents, emptyMessage: 'Không có sự kiện nào đã kết thúc.'),
+        _buildEventsGrid(endedEvents, emptyMessage: 'Không có sự kiện nào đã kết thúc.'),
       ];
     }
 
@@ -731,10 +734,63 @@ class _HomeDiscoveryPageState extends State<HomeDiscoveryPage> {
 
     if (endedEvents.isNotEmpty) {
       widgets.add(_buildSectionHeader('Đã Kết Thúc', endedEvents.length, const Color(0xFF94A3B8)));
-      widgets.add(_buildEventsColumn(endedEvents));
+      widgets.add(_buildEventsGrid(endedEvents));
     }
 
     return widgets;
+  }
+
+  Widget _buildEventsGrid(List<EventModel> events, {String emptyMessage = 'Không có sự kiện nào đã kết thúc.'}) {
+    if (events.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        child: Center(
+          child: Text(
+            emptyMessage,
+            style: const TextStyle(color: Color(0xFF8B9CB5), fontSize: 13),
+          ),
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          const crossAxisSpacing = 12.0;
+          final itemWidth = (constraints.maxWidth - crossAxisSpacing) / 2;
+          const itemHeight = 232.0;
+          final ratio = itemWidth / itemHeight;
+
+          return GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            padding: EdgeInsets.zero,
+            itemCount: events.length,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: crossAxisSpacing,
+              mainAxisSpacing: 14,
+              childAspectRatio: ratio,
+            ),
+            itemBuilder: (ctx, idx) {
+              final event = events[idx];
+              return EventCardWidget(
+                event: event,
+                compact: true,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => EventDetailPage(event: event, eventId: event.id)),
+                  ).then((_) => _loadInitialData());
+                },
+                onFavoriteToggle: () => _handleToggleFavorite(event),
+              );
+            },
+          );
+        },
+      ),
+    );
   }
 
   Widget _buildSectionHeader(String title, int count, Color accentColor) {
@@ -814,10 +870,11 @@ class _HomeDiscoveryPageState extends State<HomeDiscoveryPage> {
   Widget _buildBottomNavBar() {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF0C142A),
+        color: const Color(0xFF0C142A).withValues(alpha: 0.88),
         border: Border(top: BorderSide(color: Colors.white.withOpacity(0.08))),
       ),
       child: NavigationBar(
+        backgroundColor: Colors.transparent,
         selectedIndex: _currentBottomNavIndex,
         onDestinationSelected: (idx) {
           if ((idx == 1 || idx == 2) && (AuthService().currentUser == null || !AuthService().isLoggedIn)) {
@@ -832,7 +889,6 @@ class _HomeDiscoveryPageState extends State<HomeDiscoveryPage> {
           }
           setState(() => _currentBottomNavIndex = idx);
         },
-        backgroundColor: Colors.transparent,
         indicatorColor: const Color(0xFFC99A47).withValues(alpha: 0.25),
         elevation: 0,
         destinations: const [

@@ -4,6 +4,7 @@ import '../../../../core/api/auth_service.dart';
 import '../../../../core/api/staff_service.dart';
 import '../../../../core/models/ticket_model.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_background.dart';
 
 class QrScannerPage extends StatefulWidget {
   final String? initialGate;
@@ -832,9 +833,10 @@ class _QrScannerPageState extends State<QrScannerPage> with SingleTickerProvider
   Widget build(BuildContext context) {
     final hasActiveCard = _activeVerifyResult != null;
 
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: Stack(
+    return AppBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Stack(
         children: [
           // 1. Continuous Camera Viewfinder
           Positioned.fill(
@@ -1145,6 +1147,7 @@ class _QrScannerPageState extends State<QrScannerPage> with SingleTickerProvider
           ),
         ],
       ),
-    );
+    ),
+  );
   }
 }

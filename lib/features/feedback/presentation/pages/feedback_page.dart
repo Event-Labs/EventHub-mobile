@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/api/feedbacks_service.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_background.dart';
 
 class FeedbackPage extends StatefulWidget {
   final String? initialEventId;
@@ -145,11 +146,12 @@ class _FeedbackPageState extends State<FeedbackPage> {
     final sentiment = _ratingSentiments[_rating] ?? _ratingSentiments[5]!;
     final commentLength = _commentController.text.trim().length;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFF070D1E),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF070D1E),
-        elevation: 0,
+    return AppBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
         surfaceTintColor: Colors.transparent,
         title: const Text(
           'Đánh Giá Sự Kiện',
@@ -351,6 +353,7 @@ class _FeedbackPageState extends State<FeedbackPage> {
                 ],
               ),
             ),
+      ),
     );
   }
 }

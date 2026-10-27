@@ -9,6 +9,7 @@ import '../../../../core/api/orders_service.dart';
 import '../../../../core/models/event_model.dart';
 import '../../../../core/models/user_model.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_background.dart';
 import 'payment_page.dart';
 
 class TicketBookingPage extends StatefulWidget {
@@ -1136,11 +1137,13 @@ class _TicketBookingPageState extends State<TicketBookingPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF070D1E),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF070D1E),
-        elevation: 0,
+    return AppBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          surfaceTintColor: Colors.transparent,
+          elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18),
           onPressed: () {
@@ -1196,7 +1199,8 @@ class _TicketBookingPageState extends State<TicketBookingPage> {
           _buildBottomBar(),
         ],
       ),
-    );
+    ),
+  );
   }
 
   // ==========================================

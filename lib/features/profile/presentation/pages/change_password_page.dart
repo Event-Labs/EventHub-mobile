@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/api/auth_service.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_background.dart';
 import '../../../auth/presentation/pages/login_page.dart';
 
 class ChangePasswordPage extends StatefulWidget {
@@ -135,9 +136,10 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
 
     final titleText = hasPassword ? 'Đổi Mật Khẩu' : 'Thiết Lập Mật Khẩu';
 
-    return Scaffold(
-      backgroundColor: const Color(0xFF081126),
-      appBar: AppBar(
+    return AppBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
@@ -291,7 +293,8 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
           ),
         ),
       ),
-    );
+    ),
+  );
   }
 
   Widget _buildPasswordField({

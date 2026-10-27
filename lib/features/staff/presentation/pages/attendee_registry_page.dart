@@ -5,6 +5,7 @@ import '../../../../core/api/auth_service.dart';
 import '../../../../core/api/staff_service.dart';
 import '../../../../core/models/ticket_model.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_background.dart';
 import '../../../home/presentation/pages/home_discovery_page.dart';
 
 class AttendeeRegistryPage extends StatefulWidget {
@@ -733,11 +734,12 @@ class _AttendeeRegistryPageState extends State<AttendeeRegistryPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF081126),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF0C1446),
-        elevation: 0,
+    return AppBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
@@ -836,6 +838,7 @@ class _AttendeeRegistryPageState extends State<AttendeeRegistryPage> {
                     ),
                   ],
                 ),
+      ),
     );
   }
 

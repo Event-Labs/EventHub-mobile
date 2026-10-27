@@ -4,7 +4,6 @@ import '../../../../core/api/auth_service.dart';
 import '../../../../core/models/user_model.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../auth/presentation/pages/login_page.dart';
-import '../../../favorites/presentation/pages/favorite_events_page.dart';
 import '../../../feedback/presentation/pages/feedback_page.dart';
 import '../../../notifications/presentation/pages/notifications_page.dart';
 import '../../../refunds/presentation/pages/my_refunds_page.dart';
@@ -74,17 +73,30 @@ class _ProfilePageState extends State<ProfilePage> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF0C1446),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: AppColors.primaryContainer.withValues(alpha: 0.25)),
+        ),
         title: const Text('Đăng Xuất', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         content: const Text('Bạn có chắc chắn muốn đăng xuất khỏi tài khoản không?', style: TextStyle(color: AppColors.secondary)),
+        actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Hủy', style: TextStyle(color: AppColors.secondary)),
+            child: const Text('Hủy', style: TextStyle(color: AppColors.secondary, fontWeight: FontWeight.w600)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-            child: const Text('Đăng Xuất', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryContainer,
+              foregroundColor: AppColors.onPrimary,
+              elevation: 2,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+            ),
+            child: const Text('Đăng Xuất', style: TextStyle(color: AppColors.onPrimary, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -174,7 +186,7 @@ class _ProfilePageState extends State<ProfilePage> {
     final avatarUrl = user?.avatarUrl ?? '';
 
     return Scaffold(
-      backgroundColor: const Color(0xFF081126),
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -511,17 +523,6 @@ class _ProfilePageState extends State<ProfilePage> {
                 onTap: _openEditProfile,
               ),
               _buildProfileOption(
-                icon: Icons.favorite_border,
-                title: 'Sự kiện yêu thích',
-                subtitle: 'Xem danh sách các sự kiện đã lưu',
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const FavoriteEventsPage()),
-                  );
-                },
-              ),
-              _buildProfileOption(
                 icon: Icons.replay_circle_filled_outlined,
                 title: 'Lịch sử hoàn vé',
                 subtitle: 'Theo dõi tiến độ và trạng thái các yêu cầu hoàn trả vé',
@@ -622,25 +623,40 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Widget _buildInfoRow(IconData icon, String label, String value) {
-    return Row(
-      children: [
-        Icon(icon, color: AppColors.primaryContainer, size: 18),
-        const SizedBox(width: 12),
-        Text(
-          label,
-          style: const TextStyle(color: AppColors.secondary, fontSize: 12),
-        ),
-        const Spacer(),
-        Flexible(
-          child: Text(
-            value,
-            textAlign: TextAlign.end,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+    final isUnset = value == 'Chưa cập nhật';
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          Icon(icon, color: AppColors.primaryContainer, size: 18),
+          const SizedBox(width: 12),
+          SizedBox(
+            width: 118,
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: AppColors.secondary,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ),
-        ),
-      ],
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              value,
+              textAlign: TextAlign.start,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: isUnset ? Colors.white60 : Colors.white,
+                fontSize: 13,
+                fontWeight: isUnset ? FontWeight.normal : FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

@@ -3,6 +3,7 @@ import '../../../../core/api/auth_service.dart';
 import '../../../../core/api/notifications_service.dart';
 import '../../../auth/presentation/pages/login_page.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_background.dart';
 import '../../../home/presentation/pages/event_detail_page.dart';
 import '../../../tickets/presentation/pages/my_tickets_page.dart';
 
@@ -126,17 +127,18 @@ class _NotificationsPageState extends State<NotificationsPage> {
   @override
   Widget build(BuildContext context) {
     if (AuthService().currentUser == null || !AuthService().isLoggedIn) {
-      return Scaffold(
-        backgroundColor: const Color(0xFF070D1E),
-        appBar: AppBar(
-          backgroundColor: const Color(0xFF070D1E),
-          surfaceTintColor: Colors.transparent,
-          elevation: 0,
-          title: const Text(
-            'Thông Báo',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20),
+      return AppBackground(
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            surfaceTintColor: Colors.transparent,
+            elevation: 0,
+            title: const Text(
+              'Thông Báo',
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20),
+            ),
           ),
-        ),
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(32),
@@ -201,18 +203,20 @@ class _NotificationsPageState extends State<NotificationsPage> {
             ),
           ),
         ),
-      );
-    }
+      ),
+    );
+  }
 
     final unreadCount = _notifications.where((n) => !n.isRead).length;
     final items = _filteredNotifications;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFF070D1E),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF070D1E),
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
+    return AppBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          surfaceTintColor: Colors.transparent,
+          elevation: 0,
         title: const Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -282,7 +286,8 @@ class _NotificationsPageState extends State<NotificationsPage> {
           ),
         ],
       ),
-    );
+    ),
+  );
   }
 
   Widget _buildTabItem(int index, String label) {
