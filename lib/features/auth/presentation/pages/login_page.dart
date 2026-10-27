@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:eventhub_mobile/core/api/api_config.dart';
 import 'package:eventhub_mobile/core/api/auth_service.dart';
 import 'package:eventhub_mobile/core/models/user_model.dart';
 import 'package:eventhub_mobile/core/theme/app_colors.dart';
@@ -8,6 +7,7 @@ import 'package:eventhub_mobile/features/auth/presentation/pages/forgot_password
 import 'package:eventhub_mobile/features/auth/presentation/pages/verify_email_page.dart';
 import 'package:eventhub_mobile/features/home/presentation/pages/home_discovery_page.dart';
 import 'package:eventhub_mobile/features/staff/presentation/pages/staff_dashboard_page.dart';
+import 'package:eventhub_mobile/core/widgets/server_config_dialog.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -393,103 +393,11 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void _showServerConfigDialog() {
-    final controller = TextEditingController(text: ApiConfig.apiHost);
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF0C1446),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(
-          children: [
-            Icon(Icons.dns, color: AppColors.primaryContainer, size: 22),
-            SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                'Cấu hình Server Backend',
-                softWrap: true,
-                style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Backend URL hiện tại:\n${ApiConfig.baseUrl}',
-              style: const TextStyle(color: Color(0xFF22C55E), fontSize: 12, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Nhập IP máy tính chạy backend:',
-              style: TextStyle(color: AppColors.secondary, fontSize: 13),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: controller,
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: const Color(0xFF122155),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
-                hintText: '10.0.2.2 hoặc 127.0.0.1 hoặc 192.168.1.44',
-                hintStyle: const TextStyle(color: Colors.white38),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-              ),
-            ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: [
-                ActionChip(
-                  label: const Text('Máy ảo (10.0.2.2)', style: TextStyle(fontSize: 11)),
-                  backgroundColor: const Color(0xFF122155),
-                  labelStyle: const TextStyle(color: Colors.white),
-                  onPressed: () => controller.text = '10.0.2.2',
-                ),
-                ActionChip(
-                  label: const Text('USB Cáp (127.0.0.1)', style: TextStyle(fontSize: 11)),
-                  backgroundColor: const Color(0xFF122155),
-                  labelStyle: const TextStyle(color: Colors.white),
-                  onPressed: () => controller.text = '127.0.0.1',
-                ),
-                ActionChip(
-                  label: const Text('Wi-Fi (192.168.1.44)', style: TextStyle(fontSize: 11)),
-                  backgroundColor: const Color(0xFF122155),
-                  labelStyle: const TextStyle(color: Colors.white),
-                  onPressed: () => controller.text = '192.168.1.44',
-                ),
-              ],
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Đóng', style: TextStyle(color: AppColors.secondary)),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final newHost = controller.text.trim();
-              if (newHost.isNotEmpty) {
-                ApiConfig.setDynamicHost(newHost);
-                setState(() {});
-                Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Đã cập nhật: ${ApiConfig.baseUrl}'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              }
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryContainer),
-            child: const Text('Lưu & Áp Dụng', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
+    showServerConfigDialog(
+      context,
+      onApplied: () {
+        if (mounted) setState(() {});
+      },
     );
   }
 
@@ -534,11 +442,40 @@ class _LoginPageState extends State<LoginPage> {
               ),
             ),
           ),
-          // Vùng chạm ẩn bên phải để giữ tính năng cấu hình server (long-press)
-          GestureDetector(
-            behavior: HitTestBehavior.translucent,
-            onLongPress: _showServerConfigDialog,
-            child: const SizedBox(width: 40, height: 40),
+          // Nút cấu hình Máy chủ hiển thị rõ ràng
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: _showServerConfigDialog,
+              borderRadius: BorderRadius.circular(20),
+              splashColor: Colors.white12,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: AppColors.primaryContainer.withValues(alpha: 0.35),
+                    width: 1.0,
+                  ),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.dns_rounded, color: AppColors.primaryContainer, size: 16),
+                    SizedBox(width: 6),
+                    Text(
+                      'Máy chủ',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
         ],
       ),

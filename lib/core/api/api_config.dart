@@ -9,13 +9,49 @@ class ApiConfig {
   static const String _envPort = String.fromEnvironment('API_PORT', defaultValue: '3000');
   static const String _envProtocol = String.fromEnvironment('API_PROTOCOL', defaultValue: 'http');
 
-  // Dynamic host override if detected or switched at runtime
+  // Dynamic host or full base URL override if detected or switched at runtime
+  static String? _dynamicBaseUrl;
   static String? _dynamicHost;
-  static void setDynamicHost(String? host) {
-    _dynamicHost = host;
+
+  static void setDynamicBaseUrl(String? url) {
+    if (url == null || url.trim().isEmpty) {
+      _dynamicBaseUrl = null;
+      return;
+    }
+    var clean = url.trim();
+    while (clean.endsWith('/')) {
+      clean = clean.substring(0, clean.length - 1);
+    }
+    if (!clean.endsWith('/api')) {
+      clean = '$clean/api';
+    }
+    _dynamicBaseUrl = clean;
   }
 
-  static bool get hasResolvedHost => (_dynamicHost != null && _dynamicHost!.isNotEmpty) || _envHost.trim().isNotEmpty;
+  static void setDynamicHost(String? host) {
+    if (host == null || host.trim().isEmpty) {
+      _dynamicHost = null;
+      _dynamicBaseUrl = null;
+      return;
+    }
+    final trimmed = host.trim();
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      setDynamicBaseUrl(trimmed);
+      return;
+    }
+    if (trimmed.contains('.') && !trimmed.contains(':') && !RegExp(r'^\d+\.\d+\.\d+\.\d+$').hasMatch(trimmed) && trimmed != 'localhost') {
+      setDynamicBaseUrl('https://$trimmed');
+      return;
+    }
+    _dynamicBaseUrl = null;
+    _dynamicHost = trimmed;
+  }
+
+  static bool get hasResolvedHost =>
+      (_dynamicBaseUrl != null && _dynamicBaseUrl!.isNotEmpty) ||
+      (_dynamicHost != null && _dynamicHost!.isNotEmpty) ||
+      _envBaseUrl.trim().isNotEmpty ||
+      _envHost.trim().isNotEmpty;
 
   /// List of candidate backend hosts for auto-fallback on physical devices or emulators
   static List<String> get candidateHosts {
@@ -49,7 +85,19 @@ class ApiConfig {
   /// - Detects 192.168.1.174 on local Wi-Fi in ~15ms
   static Future<String?> autoDetectWorkingHost({bool forceRefresh = false}) async {
     if (kIsWeb) return 'localhost';
+    if (_dynamicBaseUrl != null && _dynamicBaseUrl!.isNotEmpty) {
+      return _dynamicBaseUrl;
+    }
+    if (_envBaseUrl.trim().isNotEmpty) {
+      return baseUrl;
+    }
     if (_envHost.trim().isNotEmpty) {
+      final raw = _envHost.trim();
+      if (raw.startsWith('http://') ||
+          raw.startsWith('https://') ||
+          (raw.contains('.') && !raw.contains(':') && !RegExp(r'^\d+\.\d+\.\d+\.\d+$').hasMatch(raw) && raw != 'localhost')) {
+        return baseUrl;
+      }
       return apiHost;
     }
     if (!forceRefresh && _dynamicHost != null && _dynamicHost!.isNotEmpty) {
@@ -167,6 +215,9 @@ class ApiConfig {
   /// - Physical device (Samsung S8 with adb reverse): http://127.0.0.1:3000/api
   /// - Web default: http://localhost:3000/api
   static String get baseUrl {
+    if (_dynamicBaseUrl != null && _dynamicBaseUrl!.isNotEmpty) {
+      return _dynamicBaseUrl!;
+    }
     final customUrl = _envBaseUrl.trim();
     if (customUrl.isNotEmpty) {
       var normalized = customUrl;
@@ -177,6 +228,21 @@ class ApiConfig {
         normalized = '$normalized/api';
       }
       return normalized;
+    }
+
+    final rawHost = _envHost.trim();
+    if (rawHost.startsWith('http://') || rawHost.startsWith('https://')) {
+      var normalized = rawHost;
+      while (normalized.endsWith('/')) {
+        normalized = normalized.substring(0, normalized.length - 1);
+      }
+      if (!normalized.endsWith('/api')) {
+        normalized = '$normalized/api';
+      }
+      return normalized;
+    }
+    if (rawHost.contains('.') && !rawHost.contains(':') && !RegExp(r'^\d+\.\d+\.\d+\.\d+$').hasMatch(rawHost) && rawHost != 'localhost') {
+      return 'https://$rawHost/api';
     }
 
     return '$apiProtocol://$apiHost:$apiPort/api';

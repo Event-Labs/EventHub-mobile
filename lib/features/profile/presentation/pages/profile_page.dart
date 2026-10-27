@@ -9,6 +9,8 @@ import '../../../notifications/presentation/pages/notifications_page.dart';
 import '../../../refunds/presentation/pages/my_refunds_page.dart';
 import '../../../home/presentation/pages/home_discovery_page.dart';
 import '../../../staff/presentation/pages/staff_dashboard_page.dart';
+import '../../../../core/api/api_config.dart';
+import '../../../../core/widgets/server_config_dialog.dart';
 import 'change_password_page.dart';
 import 'edit_profile_page.dart';
 
@@ -330,6 +332,19 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
         const SizedBox(height: 20),
 
+        // Cấu hình máy chủ backend (kể cả khi chưa đăng nhập)
+        _buildProfileOption(
+          icon: Icons.dns_rounded,
+          title: 'Cấu hình Máy chủ (Backend URL)',
+          subtitle: ApiConfig.baseUrl.replaceAll('/api', ''),
+          onTap: () => showServerConfigDialog(
+            context,
+            onApplied: () {
+              if (mounted) setState(() {});
+            },
+          ),
+        ),
+
         // Khi chưa đăng ký/đăng nhập: chỉ hiển thị mỗi "Trợ giúp & Hỗ trợ"
         _buildProfileOption(
           icon: Icons.help_outline,
@@ -568,6 +583,20 @@ class _ProfilePageState extends State<ProfilePage> {
                     ? 'Tạo mật khẩu để đăng nhập bằng email'
                     : 'Cập nhật mật khẩu bảo mật tài khoản',
                 onTap: _openChangePassword,
+              ),
+              _buildProfileOption(
+                icon: Icons.dns_rounded,
+                title: 'Cấu hình Máy chủ (Backend URL)',
+                subtitle: ApiConfig.baseUrl.replaceAll('/api', ''),
+                onTap: () => showServerConfigDialog(
+                  context,
+                  onApplied: () {
+                    if (mounted) {
+                      setState(() {});
+                      _fetchLatestProfile();
+                    }
+                  },
+                ),
               ),
               _buildProfileOption(
                 icon: Icons.help_outline,
