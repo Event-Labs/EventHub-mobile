@@ -33,7 +33,7 @@ class ApiConfig {
       // 2. Android Studio Emulator host loopback to PC
       if (!list.contains('10.0.2.2')) list.add('10.0.2.2');
       // 3. Local Wi-Fi network host IP (Direct PC connection)
-      if (!list.contains('192.168.1.174')) list.add('192.168.1.174');
+      if (!list.contains('192.168.1.44')) list.add('192.168.1.44');
     } else {
       if (!list.contains('localhost')) list.add('localhost');
       if (!list.contains('127.0.0.1')) list.add('127.0.0.1');
