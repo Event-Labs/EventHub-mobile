@@ -42,7 +42,7 @@ class EventCardWidget extends StatelessWidget {
             Stack(
               children: [
                 SizedBox(
-                  height: compact ? 120 : 180,
+                  height: compact ? 110 : 180,
                   width: double.infinity,
                   child: event.coverImageUrl != null && event.coverImageUrl!.isNotEmpty
                       ? Image.network(
@@ -70,10 +70,11 @@ class EventCardWidget extends StatelessWidget {
                 ),
                 // Category badge
                 Positioned(
-                  top: 12,
-                  left: 12,
+                  top: compact ? 8 : 12,
+                  left: compact ? 8 : 12,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    constraints: BoxConstraints(maxWidth: compact ? 100 : 200),
+                    padding: EdgeInsets.symmetric(horizontal: compact ? 7 : 10, vertical: compact ? 3 : 4),
                     decoration: BoxDecoration(
                       color: Colors.black.withOpacity(0.65),
                       borderRadius: BorderRadius.circular(20),
@@ -81,11 +82,13 @@ class EventCardWidget extends StatelessWidget {
                     ),
                     child: Text(
                       event.categoryName?.toUpperCase() ?? 'SỰ KIỆN',
-                      style: const TextStyle(
-                        color: Color(0xFFE6C17A),
-                        fontSize: 10,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: const Color(0xFFE6C17A),
+                        fontSize: compact ? 9 : 10,
                         fontWeight: FontWeight.bold,
-                        letterSpacing: 0.5,
+                        letterSpacing: compact ? 0.3 : 0.5,
                       ),
                     ),
                   ),
@@ -93,13 +96,13 @@ class EventCardWidget extends StatelessWidget {
                 // Favorite Heart button
                 if (onFavoriteToggle != null)
                   Positioned(
-                    top: 10,
-                    right: 10,
+                    top: compact ? 6 : 10,
+                    right: compact ? 6 : 10,
                     child: GestureDetector(
                       onTap: isFavoriteBusy ? null : onFavoriteToggle,
                       child: Container(
-                        width: 36,
-                        height: 36,
+                        width: compact ? 28 : 36,
+                        height: compact ? 28 : 36,
                         decoration: BoxDecoration(
                           color: Colors.black.withOpacity(0.55),
                           shape: BoxShape.circle,
@@ -122,7 +125,7 @@ class EventCardWidget extends StatelessWidget {
                           child: Icon(
                             event.isFavorited ? Icons.favorite : Icons.favorite_border,
                             color: event.isFavorited ? const Color(0xFFE6C17A) : Colors.white70,
-                            size: 18,
+                            size: compact ? 14 : 18,
                           ),
                         ),
                       ),
@@ -133,19 +136,25 @@ class EventCardWidget extends StatelessWidget {
 
             // Content
             Padding(
-              padding: EdgeInsets.all(compact ? 10 : 14),
+              padding: EdgeInsets.symmetric(
+                horizontal: compact ? 10 : 14,
+                vertical: compact ? 8 : 14,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    event.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: compact ? 13 : 16,
-                      fontWeight: FontWeight.bold,
-                      height: 1.25,
+                  SizedBox(
+                    height: compact ? 34 : null,
+                    child: Text(
+                      event.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: compact ? 13 : 16,
+                        fontWeight: FontWeight.bold,
+                        height: 1.25,
+                      ),
                     ),
                   ),
                   SizedBox(height: compact ? 6 : 10),
@@ -186,10 +195,12 @@ class EventCardWidget extends StatelessWidget {
                       ),
                     ],
                   ),
-                  SizedBox(height: compact ? 8 : 12),
+                  SizedBox(height: compact ? 6 : 12),
                   // Price row
                   Text(
                     event.formattedPrice,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: const Color(0xFFE6C17A),
                       fontSize: compact ? 13 : 15,

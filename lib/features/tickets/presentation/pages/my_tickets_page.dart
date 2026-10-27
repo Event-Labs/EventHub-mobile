@@ -192,9 +192,9 @@ class _MyTicketsPageState extends State<MyTicketsPage> {
   Widget build(BuildContext context) {
     if (AuthService().currentUser == null || !AuthService().isLoggedIn) {
       return Scaffold(
-        backgroundColor: const Color(0xFF070D1E),
+        backgroundColor: Colors.transparent,
         appBar: AppBar(
-          backgroundColor: const Color(0xFF070D1E),
+          backgroundColor: Colors.transparent,
           surfaceTintColor: Colors.transparent,
           elevation: 0,
           title: const Column(
@@ -285,9 +285,9 @@ class _MyTicketsPageState extends State<MyTicketsPage> {
     final tickets = _filteredTickets;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF070D1E),
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF070D1E),
+        backgroundColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         title: const Column(

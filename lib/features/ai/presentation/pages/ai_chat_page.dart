@@ -217,9 +217,9 @@ class _AiChatPageState extends State<AiChatPage> {
       onTap: () => FocusScope.of(context).unfocus(),
       behavior: HitTestBehavior.translucent,
       child: Scaffold(
-        backgroundColor: const Color(0xFF090F1F),
+        backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0D162E),
+        backgroundColor: Colors.transparent,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
         leading: IconButton(

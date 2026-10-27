@@ -10,6 +10,7 @@ import '../../../../core/api/tickets_service.dart';
 import '../../../../core/constants/banks.dart';
 import '../../../../core/models/ticket_model.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_background.dart';
 import '../../../feedback/presentation/pages/feedback_page.dart';
 
 class TicketDetailPage extends StatefulWidget {
@@ -1276,31 +1277,36 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading && _ticket == null) {
-      return const Scaffold(
-        backgroundColor: Color(0xFF070D1E),
-        body: Center(child: CircularProgressIndicator(color: AppColors.primaryContainer)),
+      return const AppBackground(
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          body: Center(child: CircularProgressIndicator(color: AppColors.primaryContainer)),
+        ),
       );
     }
 
     final ticket = _ticket;
     if (ticket == null) {
-      return Scaffold(
-        backgroundColor: const Color(0xFF070D1E),
-        appBar: AppBar(backgroundColor: const Color(0xFF070D1E), elevation: 0),
-        body: const Center(
-          child: Text('Không tìm thấy thông tin vé.', style: TextStyle(color: Colors.white70)),
+      return AppBackground(
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          appBar: AppBar(backgroundColor: Colors.transparent, elevation: 0),
+          body: const Center(
+            child: Text('Không tìm thấy thông tin vé.', style: TextStyle(color: Colors.white70)),
+          ),
         ),
       );
     }
 
     final statusColor = ticket.statusColor;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFF070D1E),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF070D1E),
-        elevation: 0,
-        title: const Text('Chi Tiết Vé Điện Tử', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+    return AppBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          title: const Text('Chi Tiết Vé Điện Tử', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
             onPressed: () => _showReminderModal(ticket),
@@ -1563,7 +1569,8 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
           ],
         ),
       ),
-    );
+    ),
+  );
   }
 
   Widget _buildInfoTile(String label, String value, IconData icon) {
