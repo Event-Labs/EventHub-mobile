@@ -1,3 +1,4 @@
+import 'dart:convert';
 import '../models/ticket_model.dart';
 import 'api_client.dart';
 import 'api_config.dart';
@@ -7,14 +8,89 @@ class StaffService {
   factory StaffService() => _instance;
   StaffService._internal();
 
-  /// Check-in ticket using QR code payload (raw string from camera or input)
+  /// Parse QR code string: if JSON was encoded in the QR, extract ticket_code and ticket_id
+  static Map<String, String> parseQrPayload(String rawCode) {
+    final clean = rawCode.trim();
+    if ((clean.startsWith('{') && clean.endsWith('}')) || (clean.startsWith('{"') && clean.contains('}'))) {
+      try {
+        final decoded = jsonDecode(clean);
+        if (decoded is Map) {
+          final ticketCode = decoded['ticket_code']?.toString() ?? decoded['code']?.toString() ?? '';
+          final ticketId = decoded['ticket_id']?.toString() ?? decoded['id']?.toString() ?? '';
+          final qrCodeVal = decoded['qr_code']?.toString() ?? '';
+          final effective = ticketCode.isNotEmpty
+              ? ticketCode
+              : (qrCodeVal.isNotEmpty ? qrCodeVal : (ticketId.isNotEmpty ? ticketId : clean));
+          return {
+            'effective_code': effective,
+            'ticket_code': ticketCode,
+            'ticket_id': ticketId,
+            'qr_code': qrCodeVal.isNotEmpty ? qrCodeVal : effective,
+          };
+        }
+      } catch (_) {}
+    }
+    return {
+      'effective_code': clean,
+      'ticket_code': clean,
+      'ticket_id': '',
+      'qr_code': clean,
+    };
+  }
+
+  /// Sanitize error messages so that no raw JSON or technical stack traces are shown
+  static String sanitizeStaffMessage(dynamic rawMsg, {String? defaultMsg}) {
+    if (rawMsg == null) return defaultMsg ?? 'Không tìm thấy thông tin vé!';
+    final str = rawMsg.toString().trim();
+    if (str.isEmpty) return defaultMsg ?? 'Không tìm thấy thông tin vé!';
+
+    // If message is or contains JSON, parse message property or sanitize
+    if ((str.startsWith('{') && str.endsWith('}')) || str.contains('"errorCode"') || str.contains('SyntaxError')) {
+      try {
+        final decoded = jsonDecode(str);
+        if (decoded is Map && decoded['message'] != null) {
+          return sanitizeStaffMessage(decoded['message'], defaultMsg: defaultMsg);
+        }
+      } catch (_) {}
+      return 'Mã QR không hợp lệ hoặc không thuộc hệ thống EventHub.';
+    }
+
+    final lower = str.toLowerCase();
+    if (lower.contains('not found') || lower.contains('không tìm thấy') || lower.contains('ticket_not_found')) {
+      return 'Không tìm thấy vé trong hệ thống hoặc mã vé không tồn tại.';
+    }
+    if (lower.contains('already checked') || lower.contains('đã check-in') || lower.contains('already_used')) {
+      return 'Vé này đã được check-in trước đó.';
+    }
+    if (lower.contains('auth_required') || lower.contains('not authorized') || lower.contains('không có quyền')) {
+      return 'Tài khoản không có quyền thực hiện soát vé cho sự kiện này.';
+    }
+    if (lower.contains('invalid') || lower.contains('không hợp lệ')) {
+      return 'Mã vé không hợp lệ hoặc đã hết hạn.';
+    }
+    if (lower.contains('cancelled') || lower.contains('đã hủy') || lower.contains('refunded')) {
+      return 'Vé này đã bị hủy hoặc hoàn tiền.';
+    }
+
+    // Strip any residual json braces
+    final clean = str.replaceAll(RegExp(r'\{.*?\}'), '').trim();
+    return clean.isNotEmpty ? clean : (defaultMsg ?? 'Thao tác soát vé không thành công.');
+  }
+
+  /// Check-in ticket using QR code payload (extracts clean code, never outputs raw JSON)
   Future<Map<String, dynamic>> checkInByQr(String qrCode, {String? gate}) async {
     try {
-      final response = await ApiClient().post(ApiConfig.staffCheckInQr, {
-        'code': qrCode,
-        'qr_code': qrCode,
+      final parsed = parseQrPayload(qrCode);
+      final effectiveCode = parsed['effective_code']!;
+      final payload = <String, dynamic>{
+        'code': effectiveCode,
+        'qr_code': parsed['qr_code'] ?? effectiveCode,
         'gate': gate ?? 'GATE 01',
-      });
+        if (parsed['ticket_id'] != null && parsed['ticket_id']!.isNotEmpty)
+          'ticket_id': parsed['ticket_id'],
+      };
+
+      final response = await ApiClient().post(ApiConfig.staffCheckInQr, payload);
 
       if (response != null && response['success'] == true) {
         final ticketData = response['data']?['ticket'] ?? response['data'];
@@ -26,13 +102,18 @@ class StaffService {
           'success': true,
           'message': response['message'] ?? 'Check-in thành công!',
           'ticket': ticket,
+          'ticket_code': ticket?.ticketCode ?? (parsed['ticket_code']?.isNotEmpty == true ? parsed['ticket_code'] : effectiveCode),
           'raw': response['data'],
         };
       }
 
+      final errorMsg = sanitizeStaffMessage(
+        response?['message'] ?? response?['error']?['message'],
+        defaultMsg: 'Mã vé không hợp lệ hoặc vé không thể soát.',
+      );
       return {
         'success': false,
-        'message': response?['message'] ?? 'Mã vé $qrCode không hợp lệ hoặc vé không thể soát.',
+        'message': errorMsg,
       };
     } catch (e) {
       return {
@@ -42,13 +123,19 @@ class StaffService {
     }
   }
 
-  /// Verify QR without completing check-in (preview ticket info)
+  /// Verify QR without completing check-in (preview ticket info, extracts clean code)
   Future<Map<String, dynamic>> verifyQr(String qrCode) async {
     try {
-      final response = await ApiClient().post(ApiConfig.staffVerifyQr, {
-        'code': qrCode,
-        'qr_code': qrCode,
-      });
+      final parsed = parseQrPayload(qrCode);
+      final effectiveCode = parsed['effective_code']!;
+      final payload = <String, dynamic>{
+        'code': effectiveCode,
+        'qr_code': parsed['qr_code'] ?? effectiveCode,
+        if (parsed['ticket_id'] != null && parsed['ticket_id']!.isNotEmpty)
+          'ticket_id': parsed['ticket_id'],
+      };
+
+      final response = await ApiClient().post(ApiConfig.staffVerifyQr, payload);
 
       if (response != null && response['success'] == true && response['data'] != null) {
         final ticketData = response['data']?['ticket'] ?? response['data'];
@@ -60,12 +147,19 @@ class StaffService {
           'success': true,
           'message': response['message'] ?? 'Vé hợp lệ!',
           'ticket': ticket,
+          'ticket_code': ticket?.ticketCode ?? (parsed['ticket_code']?.isNotEmpty == true ? parsed['ticket_code'] : effectiveCode),
           'raw': response['data'],
         };
       }
+
+      final errorMsg = sanitizeStaffMessage(
+        response?['message'] ?? response?['error']?['message'],
+        defaultMsg: 'Không tìm thấy thông tin vé hoặc mã QR không tồn tại.',
+      );
       return {
         'success': false,
-        'message': response?['message'] ?? 'Không tìm thấy thông tin vé!',
+        'message': errorMsg,
+        'ticket_code': parsed['ticket_code']?.isNotEmpty == true ? parsed['ticket_code'] : null,
       };
     } catch (e) {
       return {'success': false, 'message': 'Lỗi xác thực vé: $e'};
@@ -197,9 +291,13 @@ class StaffService {
         };
       }
 
+      final errorMsg = sanitizeStaffMessage(
+        patchResponse?['message'] ?? patchResponse?['error']?['message'],
+        defaultMsg: 'Không thể check-in vé này!',
+      );
       return {
         'success': false,
-        'message': patchResponse?['message'] ?? 'Không thể check-in vé này!',
+        'message': errorMsg,
       };
     } catch (e) {
       return {

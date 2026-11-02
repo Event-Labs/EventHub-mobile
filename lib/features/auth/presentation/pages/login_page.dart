@@ -7,7 +7,6 @@ import 'package:eventhub_mobile/features/auth/presentation/pages/forgot_password
 import 'package:eventhub_mobile/features/auth/presentation/pages/verify_email_page.dart';
 import 'package:eventhub_mobile/features/home/presentation/pages/home_discovery_page.dart';
 import 'package:eventhub_mobile/features/staff/presentation/pages/staff_dashboard_page.dart';
-import 'package:eventhub_mobile/core/widgets/server_config_dialog.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -391,16 +390,6 @@ class _LoginPageState extends State<LoginPage> {
       ),
     );
   }
-
-  void _showServerConfigDialog() {
-    showServerConfigDialog(
-      context,
-      onApplied: () {
-        if (mounted) setState(() {});
-      },
-    );
-  }
-
   Widget _buildHeader() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
@@ -442,41 +431,7 @@ class _LoginPageState extends State<LoginPage> {
               ),
             ),
           ),
-          // Nút cấu hình Máy chủ hiển thị rõ ràng
-          Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: _showServerConfigDialog,
-              borderRadius: BorderRadius.circular(20),
-              splashColor: Colors.white12,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: AppColors.primaryContainer.withValues(alpha: 0.35),
-                    width: 1.0,
-                  ),
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.dns_rounded, color: AppColors.primaryContainer, size: 16),
-                    SizedBox(width: 6),
-                    Text(
-                      'Máy chủ',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
+          const SizedBox(width: 38),
         ],
       ),
     );

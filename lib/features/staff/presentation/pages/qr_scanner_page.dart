@@ -127,9 +127,12 @@ class _QrScannerPageState extends State<QrScannerPage> with SingleTickerProvider
     final cleanCode = code.trim();
     if (cleanCode.isEmpty || _isProcessing || _isCheckingIn) return;
 
+    final parsed = StaffService.parseQrPayload(cleanCode);
+    final effectiveCode = parsed['effective_code'] ?? cleanCode;
+
     setState(() {
       _isProcessing = true;
-      _currentProcessingCode = cleanCode;
+      _currentProcessingCode = effectiveCode;
       _checkInError = null;
     });
 
@@ -142,33 +145,86 @@ class _QrScannerPageState extends State<QrScannerPage> with SingleTickerProvider
       final TicketModel? ticket =
           verifyRes['ticket'] is TicketModel ? (verifyRes['ticket'] as TicketModel) : null;
 
+      if (verifyRes['success'] == true && ticket != null) {
+        setState(() {
+          _isProcessing = false;
+          _activeVerifyResult = verifyRes;
+          _activeTicket = ticket;
+          _currentProcessingCode = ticket.ticketCode;
+          _justCheckedIn = false;
+          _checkInError = null;
+          _lastScanResult = {
+            'success': true,
+            'message': 'Đã tìm thấy vé ${ticket.ticketCode}',
+          };
+        });
+      } else {
+        final friendlyMsg = StaffService.sanitizeStaffMessage(
+          verifyRes['message'],
+          defaultMsg: 'Vé không tồn tại trong hệ thống hoặc mã QR không hợp lệ.',
+        );
+
+        setState(() {
+          _isProcessing = false;
+          _activeVerifyResult = null;
+          _activeTicket = null;
+          _currentProcessingCode = null;
+          _justCheckedIn = false;
+          _checkInError = null;
+          _lastScanResult = {
+            'success': false,
+            'message': friendlyMsg,
+          };
+        });
+
+        // Báo lỗi rõ ràng bằng SnackBar nổi cho nhân viên
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.cancel_rounded, color: Colors.white, size: 22),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    friendlyMsg,
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      final friendlyMsg = 'Lỗi kết nối khi kiểm tra vé: $e';
       setState(() {
         _isProcessing = false;
-        _activeVerifyResult = verifyRes;
-        _activeTicket = ticket;
+        _activeVerifyResult = null;
+        _activeTicket = null;
+        _currentProcessingCode = null;
         _justCheckedIn = false;
         _checkInError = null;
         _lastScanResult = {
-          'success': verifyRes['success'] == true,
-          'message': verifyRes['message'] ?? (ticket != null ? 'Đã tìm thấy vé ${ticket.ticketCode}' : 'Không tìm thấy vé'),
+          'success': false,
+          'message': friendlyMsg,
         };
       });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _isProcessing = false;
-        _activeVerifyResult = {
-          'success': false,
-          'message': 'Lỗi kết nối khi xác thực vé: $e',
-        };
-        _activeTicket = null;
-        _justCheckedIn = false;
-        _checkInError = 'Lỗi kết nối: $e';
-        _lastScanResult = {
-          'success': false,
-          'message': 'Lỗi khi kiểm tra vé: $e',
-        };
-      });
+
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(friendlyMsg),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
     }
   }
 
@@ -210,12 +266,16 @@ class _QrScannerPageState extends State<QrScannerPage> with SingleTickerProvider
           };
         });
       } else {
+        final friendlyMsg = StaffService.sanitizeStaffMessage(
+          checkInRes['message'],
+          defaultMsg: 'Check-in thất bại!',
+        );
         setState(() {
           _isCheckingIn = false;
-          _checkInError = checkInRes['message'] ?? 'Check-in thất bại!';
+          _checkInError = friendlyMsg;
           _lastScanResult = {
             'success': false,
-            'message': checkInRes['message'] ?? 'Check-in thất bại!',
+            'message': friendlyMsg,
           };
         });
       }
@@ -414,6 +474,52 @@ class _QrScannerPageState extends State<QrScannerPage> with SingleTickerProvider
     );
   }
 
+  Widget _buildCompactItem({
+    required IconData icon,
+    required String label,
+    required String value,
+    String? subValue,
+    bool highlight = false,
+    bool isFullWidth = false,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 13, color: AppColors.secondary),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: const TextStyle(color: AppColors.secondary, fontSize: 11),
+            ),
+          ],
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          maxLines: isFullWidth ? 2 : 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            color: highlight ? AppColors.primaryContainer : Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 12.5,
+            fontFamily: highlight ? 'monospace' : null,
+          ),
+        ),
+        if (subValue != null && subValue.isNotEmpty)
+          Text(
+            subValue,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Colors.white60, fontSize: 10),
+          ),
+      ],
+    );
+  }
+
   Widget _buildDetailRow(
     String label,
     String value, {
@@ -423,7 +529,7 @@ class _QrScannerPageState extends State<QrScannerPage> with SingleTickerProvider
     Widget? valueWidget,
   }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2.5),
+      padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -438,7 +544,7 @@ class _QrScannerPageState extends State<QrScannerPage> with SingleTickerProvider
             flex: 2,
             child: Text(
               label,
-              style: const TextStyle(color: AppColors.secondary, fontSize: 12),
+              style: const TextStyle(color: AppColors.secondary, fontSize: 11),
               softWrap: true,
             ),
           ),
@@ -468,7 +574,7 @@ class _QrScannerPageState extends State<QrScannerPage> with SingleTickerProvider
 
   Widget _buildStatusBadge(String text, Color color) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.16),
         borderRadius: BorderRadius.circular(6),
@@ -480,9 +586,9 @@ class _QrScannerPageState extends State<QrScannerPage> with SingleTickerProvider
         textAlign: TextAlign.center,
         style: TextStyle(
           color: color,
-          fontSize: 11,
+          fontSize: 10.5,
           fontWeight: FontWeight.bold,
-          letterSpacing: 0.3,
+          letterSpacing: 0.2,
         ),
       ),
     );
@@ -508,7 +614,7 @@ class _QrScannerPageState extends State<QrScannerPage> with SingleTickerProvider
             ? const Color(0xFF072118)
             : const Color(0xFF260D12));
 
-    final maxHeight = MediaQuery.of(context).size.height * 0.65;
+    final maxHeight = MediaQuery.of(context).size.height * 0.88;
 
     return Container(
       constraints: BoxConstraints(maxHeight: maxHeight),
@@ -536,59 +642,23 @@ class _QrScannerPageState extends State<QrScannerPage> with SingleTickerProvider
       child: SafeArea(
         top: false,
         child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+          physics: const ClampingScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Top Drag Handle & Close Row
+              // 1. Top Header Row: Status icon + Title/Subtitle + Close button
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: primaryColor.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: primaryColor.withValues(alpha: 0.3)),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        CircleAvatar(radius: 3, backgroundColor: primaryColor),
-                        const SizedBox(width: 5),
-                        Text(
-                          isAlreadyCheckedIn
-                              ? (_justCheckedIn ? 'CHECK-IN XONG' : 'ĐÃ TỪNG CHECK-IN')
-                              : (canCheckIn ? 'VÉ HỢP LỆ' : 'KHÔNG HỢP LỆ'),
-                          style: TextStyle(color: primaryColor, fontSize: 10, fontWeight: FontWeight.bold),
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white70, size: 20),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    tooltip: 'Đóng thẻ quét',
-                    onPressed: _dismissActiveTicketCard,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-
-              // Header Row: Status icon + Main Title + Subtitle
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 44,
-                    height: 44,
+                    width: 36,
+                    height: 36,
                     decoration: BoxDecoration(
                       color: primaryColor.withValues(alpha: 0.2),
                       shape: BoxShape.circle,
-                      border: Border.all(color: primaryColor, width: 2),
+                      border: Border.all(color: primaryColor, width: 1.5),
                     ),
                     child: Icon(
                       isAlreadyCheckedIn
@@ -597,10 +667,10 @@ class _QrScannerPageState extends State<QrScannerPage> with SingleTickerProvider
                               ? Icons.confirmation_number_outlined
                               : (isVerified ? Icons.warning_amber_rounded : Icons.cancel_rounded)),
                       color: primaryColor,
-                      size: 26,
+                      size: 20,
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -611,144 +681,192 @@ class _QrScannerPageState extends State<QrScannerPage> with SingleTickerProvider
                               : (canCheckIn
                                   ? 'THÔNG TIN VÉ HỢP LỆ'
                                   : (isVerified ? 'VÉ KHÔNG THỂ CHECK-IN' : 'XÁC THỰC THẤT BẠI!')),
-                          softWrap: true,
                           style: TextStyle(
                             color: primaryColor,
-                            fontSize: 15,
+                            fontSize: 14,
                             fontWeight: FontWeight.bold,
                             letterSpacing: 0.2,
                           ),
                         ),
-                        const SizedBox(height: 2),
                         Text(
                           isAlreadyCheckedIn
                               ? (_justCheckedIn
-                                  ? 'Đã ghi nhận vào cổng thành công. Đưa mã tiếp theo để quét tiếp.'
-                                  : 'Vé này đã check-in trước đó, không thể soát lại.')
+                                  ? 'Đã vào cổng thành công'
+                                  : 'Vé đã check-in trước đó')
                               : (canCheckIn
-                                  ? 'Bấm nút bên dưới để xác nhận check-in vào cổng.'
+                                  ? 'Nhấn nút bên dưới để xác nhận vào cổng'
                                   : (verifyResult['message'] ?? (current != null ? current.formattedStatus : 'Vé không hợp lệ!'))),
-                          softWrap: true,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(color: Colors.white70, fontSize: 11),
                         ),
                       ],
                     ),
                   ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white70, size: 20),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    tooltip: 'Đóng',
+                    onPressed: _dismissActiveTicketCard,
+                  ),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
 
-              // Details Table Box
+              // 2. Structured Information Grid: fits fully without scrolling
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
                   color: const Color(0xFF0C1446).withValues(alpha: 0.85),
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
                 ),
                 child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    _buildDetailRow(
-                      'Mã vé',
-                      current?.ticketCode ?? code,
-                      icon: Icons.qr_code,
-                      highlight: true,
-                    ),
-                    const Divider(color: Colors.white12, height: 10),
-                    _buildDetailRow(
-                      'Trạng thái vé',
-                      '',
-                      icon: Icons.info_outline,
-                      valueWidget: _buildStatusBadge(
-                        isAlreadyCheckedIn
-                            ? 'ĐÃ CHECK-IN'
-                            : (canCheckIn ? 'CHƯA CHECK-IN' : (current?.formattedStatus ?? 'KHÔNG HỢP LỆ')),
-                        primaryColor,
-                      ),
-                    ),
-                    if (isAlreadyCheckedIn) ...[
-                      const Divider(color: Colors.white12, height: 10),
-                      _buildDetailRow(
-                        'Thời gian check-in',
-                        current.formattedCheckInTime.isNotEmpty
-                            ? current.formattedCheckInTime
-                            : 'Vừa xong',
-                        icon: Icons.access_time,
-                        valueColor: primaryColor,
-                      ),
-                    ],
-                    const Divider(color: Colors.white12, height: 10),
-                    _buildDetailRow(
-                      'Cổng soát vé',
-                      _selectedGate,
-                      icon: Icons.door_front_door_outlined,
-                    ),
-                    if (current != null) ...[
-                      const Divider(color: Colors.white12, height: 10),
-                      _buildDetailRow(
-                        'Khách hàng',
-                        (current.customerName != null && current.customerName!.isNotEmpty)
-                            ? current.customerName!
-                            : 'Khách vãng lai',
-                        icon: Icons.person_outline,
-                      ),
-                      if (current.customerEmail != null && current.customerEmail!.isNotEmpty) ...[
-                        const Divider(color: Colors.white12, height: 10),
-                        _buildDetailRow(
-                          'Email',
-                          current.customerEmail!,
-                          icon: Icons.email_outlined,
+                    // Row 1: Khách hàng & Mã vé
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: _buildCompactItem(
+                            icon: Icons.person_outline,
+                            label: 'Khách hàng',
+                            value: (current?.customerName != null && current!.customerName!.isNotEmpty)
+                                ? current.customerName!
+                                : 'Khách vãng lai',
+                            subValue: (current?.customerEmail != null && current!.customerEmail!.isNotEmpty)
+                                ? current.customerEmail!
+                                : null,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: _buildCompactItem(
+                            icon: Icons.qr_code,
+                            label: 'Mã vé',
+                            value: current?.ticketCode ?? (code.contains('{') ? 'Mã vé' : code),
+                            highlight: true,
+                          ),
                         ),
                       ],
-                      const Divider(color: Colors.white12, height: 10),
-                      _buildDetailRow(
-                        'Hạng vé',
-                        current.ticketType ?? 'Tiêu chuẩn',
-                        icon: Icons.confirmation_number_outlined,
+                    ),
+                    const Divider(color: Colors.white10, height: 10),
+                    // Row 2: Hạng vé & Vị trí ghế
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: _buildCompactItem(
+                            icon: Icons.confirmation_number_outlined,
+                            label: 'Hạng vé',
+                            value: current?.ticketType ?? 'Tiêu chuẩn',
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: _buildCompactItem(
+                            icon: Icons.event_seat_outlined,
+                            label: 'Vị trí ghế',
+                            value: (current?.seatName != null && current!.seatName!.isNotEmpty)
+                                ? current.seatName!
+                                : 'Tự do (GA)',
+                          ),
+                        ),
+                      ],
+                    ),
+                    const Divider(color: Colors.white10, height: 10),
+                    // Row 3: Cổng soát & Trạng thái vé / Check-in time
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: _buildCompactItem(
+                            icon: Icons.door_front_door_outlined,
+                            label: 'Cổng soát vé',
+                            value: _selectedGate,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    isAlreadyCheckedIn ? Icons.access_time : Icons.info_outline,
+                                    size: 13,
+                                    color: AppColors.secondary,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  const Text(
+                                    'Trạng thái',
+                                    style: TextStyle(color: AppColors.secondary, fontSize: 11),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 2),
+                              Row(
+                                children: [
+                                  _buildStatusBadge(
+                                    isAlreadyCheckedIn
+                                        ? 'ĐÃ CHECK-IN'
+                                        : (canCheckIn ? 'CHƯA CHECK-IN' : (current?.formattedStatus ?? 'KHÔNG HỢP LỆ')),
+                                    primaryColor,
+                                  ),
+                                  if (isAlreadyCheckedIn && current != null && current.formattedCheckInTime.isNotEmpty) ...[
+                                    const SizedBox(width: 4),
+                                    Expanded(
+                                      child: Text(
+                                        current.formattedCheckInTime,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(color: primaryColor, fontSize: 10, fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (current != null && current.eventName.isNotEmpty) ...[
+                      const Divider(color: Colors.white10, height: 10),
+                      // Row 4: Sự kiện
+                      _buildCompactItem(
+                        icon: Icons.festival_outlined,
+                        label: 'Sự kiện',
+                        value: current.eventName,
+                        isFullWidth: true,
                       ),
-                      if (current.seatName != null && current.seatName!.isNotEmpty) ...[
-                        const Divider(color: Colors.white12, height: 10),
-                        _buildDetailRow(
-                          'Vị trí ghế',
-                          current.seatName!,
-                          icon: Icons.event_seat_outlined,
-                        ),
-                      ],
-                      if (current.eventName.isNotEmpty) ...[
-                        const Divider(color: Colors.white12, height: 10),
-                        _buildDetailRow(
-                          'Sự kiện',
-                          current.eventName,
-                          icon: Icons.festival_outlined,
-                        ),
-                      ],
                     ],
                   ],
                 ),
               ),
 
               if (_checkInError != null) ...[
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
                     color: AppColors.error.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: AppColors.error),
                   ),
                   child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Padding(
-                        padding: EdgeInsets.only(top: 2),
-                        child: Icon(Icons.error_outline, color: AppColors.error, size: 16),
-                      ),
-                      const SizedBox(width: 8),
+                      const Icon(Icons.error_outline, color: AppColors.error, size: 14),
+                      const SizedBox(width: 6),
                       Expanded(
                         child: Text(
                           _checkInError!,
-                          softWrap: true,
-                          style: const TextStyle(color: Colors.white, fontSize: 12),
+                          style: const TextStyle(color: Colors.white, fontSize: 11),
                         ),
                       ),
                     ],
@@ -756,52 +874,49 @@ class _QrScannerPageState extends State<QrScannerPage> with SingleTickerProvider
                 ),
               ],
 
-              const SizedBox(height: 14),
+              const SizedBox(height: 10),
 
-              // Action Buttons:
-              // 1. If ticket is not checked in yet and valid -> Show button "XÁC NHẬN CHECK-IN"
-              // 2. If ticket is ALREADY checked in -> DO NOT show button checkin, only show button "QUÉT VÉ TIẾP THEO"
+              // 3. Action Buttons
               if (canCheckIn && !isAlreadyCheckedIn) ...[
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: _isCheckingIn ? null : _handleConfirmCheckIn,
-                    icon: _isCheckingIn
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                          )
-                        : const Icon(Icons.how_to_reg, color: Colors.white, size: 20),
-                    label: Text(
-                      _isCheckingIn ? 'ĐANG XỬ LÝ CHECK-IN...' : 'XÁC NHẬN CHECK-IN (${_selectedGate.split(' - ').first})',
-                      softWrap: true,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                Row(
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: ElevatedButton.icon(
+                        onPressed: _isCheckingIn ? null : _handleConfirmCheckIn,
+                        icon: _isCheckingIn
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                              )
+                            : const Icon(Icons.how_to_reg, color: Colors.white, size: 18),
+                        label: Text(
+                          _isCheckingIn ? 'ĐANG CHECK-IN...' : 'XÁC NHẬN CHECK-IN ()',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF22C55E),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 11),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          elevation: 3,
+                        ),
+                      ),
                     ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF22C55E),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 8),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      elevation: 4,
+                    const SizedBox(width: 8),
+                    IconButton(
+                      onPressed: _dismissActiveTicketCard,
+                      icon: const Icon(Icons.refresh, color: Colors.white70),
+                      tooltip: 'Bỏ qua / Quét tiếp',
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.white12,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
                     ),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Center(
-                  child: TextButton(
-                    onPressed: _dismissActiveTicketCard,
-                    child: const Text(
-                      'Bỏ qua / Quét vé khác',
-                      softWrap: true,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.white60, fontSize: 12),
-                    ),
-                  ),
+                  ],
                 ),
               ] else ...[
-                // Vé đã được check-in hoặc không hợp lệ: Không hiển thị button check-in nữa, chỉ hiển thị thông tin và nút Quét tiếp
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
@@ -809,15 +924,13 @@ class _QrScannerPageState extends State<QrScannerPage> with SingleTickerProvider
                     icon: const Icon(Icons.qr_code_scanner, color: Colors.white, size: 18),
                     label: const Text(
                       'QUÉT VÉ TIẾP THEO',
-                      softWrap: true,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                     ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primaryContainer,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 8),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(vertical: 11),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
                   ),
                 ),

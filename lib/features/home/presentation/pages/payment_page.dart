@@ -6,7 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/api/orders_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_background.dart';
-import '../../../tickets/presentation/pages/my_tickets_page.dart';
+import 'payment_success_page.dart';
 
 class PaymentPage extends StatefulWidget {
   final String orderId;
@@ -55,6 +55,15 @@ class _PaymentPageState extends State<PaymentPage> {
       _secondsLeft = widget.initialSecondsLeft!;
     }
     _parseExpiredTime();
+    final totalAmount = (_orderData?['order']?['total_amount'] as num?)?.toDouble() ??
+        (_orderData?['order']?['total_price'] as num?)?.toDouble();
+    if (totalAmount == 0 || _orderStatus == 'PAID' || _orderStatus == 'COMPLETED') {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _navigateToSuccess();
+      });
+      return;
+    }
+
     _startCountdown();
     _startPolling();
     // Fetch immediately to ensure freshest database state
@@ -187,8 +196,8 @@ class _PaymentPageState extends State<PaymentPage> {
       });
       final status = _orderStatus;
 
-      if (status == 'PAID') {
-        _navigateToMyTickets();
+      if (status == 'PAID' || status == 'COMPLETED') {
+        _navigateToSuccess();
       } else if (status == 'CANCELLED' || status == 'EXPIRED') {
         _pollingTimer?.cancel();
         _countdownTimer?.cancel();
@@ -196,24 +205,20 @@ class _PaymentPageState extends State<PaymentPage> {
     }
   }
 
-  void _navigateToMyTickets() {
+  void _navigateToSuccess() {
     if (_hasNavigated || !mounted) return;
     _hasNavigated = true;
     _pollingTimer?.cancel();
     _countdownTimer?.cancel();
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Thanh toán thành công. Vé của bạn đã sẵn sàng!'),
-        backgroundColor: Color(0xFF22C55E),
-        duration: Duration(seconds: 3),
-      ),
-    );
-
-    Navigator.pushAndRemoveUntil(
+    Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (_) => const MyTicketsPage()),
-      (route) => route.isFirst,
+      MaterialPageRoute(
+        builder: (_) => PaymentSuccessPage(
+          orderId: widget.orderId,
+          orderData: _orderData,
+        ),
+      ),
     );
   }
 

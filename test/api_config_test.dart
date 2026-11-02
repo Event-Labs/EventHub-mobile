@@ -3,27 +3,28 @@ import 'package:eventhub_mobile/core/api/api_config.dart';
 
 void main() {
   group('ApiConfig Host & BaseUrl Resolution Tests', () {
-    test('baseUrl always ends with /api and does not have trailing slash', () {
+    test('baseUrl always ends with /api and points to api.eventhub.id.vn', () {
       final base = ApiConfig.baseUrl;
+      expect(base, equals('https://api.eventhub.id.vn/api'));
       expect(base, endsWith('/api'));
       expect(base.endsWith('/api/'), isFalse);
-      expect(base.startsWith('http://') || base.startsWith('https://'), isTrue);
+      expect(base.startsWith('https://'), isTrue);
     });
 
-    test('apiHost returns valid non-empty host', () {
+    test('apiHost returns fixed host api.eventhub.id.vn', () {
       final host = ApiConfig.apiHost;
-      expect(host, isNotEmpty);
+      expect(host, equals('api.eventhub.id.vn'));
       expect(host.contains('/'), isFalse);
       expect(host.contains('http://'), isFalse);
       expect(host.contains('https://'), isFalse);
     });
 
-    test('apiPort defaults to 3000', () {
-      expect(ApiConfig.apiPort, equals(3000));
+    test('apiPort defaults to 443 for HTTPS', () {
+      expect(ApiConfig.apiPort, equals(443));
     });
 
-    test('apiProtocol defaults to http', () {
-      expect(ApiConfig.apiProtocol, equals('http'));
+    test('apiProtocol defaults to https', () {
+      expect(ApiConfig.apiProtocol, equals('https'));
     });
 
     test('Core API endpoints are properly formatted with leading slashes', () {
@@ -44,11 +45,10 @@ void main() {
     test('Constructed endpoint URLs do not create duplicate /api/api or double slashes', () {
       final base = ApiConfig.baseUrl;
       final fullUrl = '$base${ApiConfig.events}';
-      expect(fullUrl, contains('/api/events'));
+      expect(fullUrl, equals('https://api.eventhub.id.vn/api/events'));
       expect(fullUrl.contains('/api/api'), isFalse);
       expect(fullUrl.contains('://'), isTrue);
-      // Remove protocol and verify no '//'
-      final withoutProtocol = fullUrl.replaceFirst('http://', '').replaceFirst('https://', '');
+      final withoutProtocol = fullUrl.replaceFirst('https://', '');
       expect(withoutProtocol.contains('//'), isFalse);
     });
 

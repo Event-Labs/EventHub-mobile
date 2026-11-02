@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../../../core/api/api_client.dart';
 import '../../../../core/api/auth_service.dart';
 import '../../../../core/models/user_model.dart';
@@ -9,8 +10,7 @@ import '../../../notifications/presentation/pages/notifications_page.dart';
 import '../../../refunds/presentation/pages/my_refunds_page.dart';
 import '../../../home/presentation/pages/home_discovery_page.dart';
 import '../../../staff/presentation/pages/staff_dashboard_page.dart';
-import '../../../../core/api/api_config.dart';
-import '../../../../core/widgets/server_config_dialog.dart';
+
 import 'change_password_page.dart';
 import 'edit_profile_page.dart';
 
@@ -51,6 +51,113 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
+
+  Future<void> _showAvatarOptions() async {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF0C1446),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: Colors.white24,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const Text(
+                'Ảnh Đại Diện',
+                style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: const BoxDecoration(color: Color(0xFF1E293B), shape: BoxShape.circle),
+                  child: const Icon(Icons.photo_library_outlined, color: AppColors.primaryContainer, size: 20),
+                ),
+                title: const Text('Chọn ảnh từ album điện thoại', style: TextStyle(color: Colors.white, fontSize: 14)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickAndUpdateAvatar();
+                },
+              ),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: const BoxDecoration(color: Color(0xFF1E293B), shape: BoxShape.circle),
+                  child: const Icon(Icons.edit_outlined, color: Colors.white70, size: 20),
+                ),
+                title: const Text('Chỉnh sửa thông tin hồ sơ', style: TextStyle(color: Colors.white, fontSize: 14)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _openEditProfile();
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickAndUpdateAvatar() async {
+    try {
+      final picker = ImagePicker();
+      final picked = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 85,
+      );
+      if (picked == null) return;
+
+      if (!mounted) return;
+      setState(() => _isLoading = true);
+
+      final bytes = await picked.readAsBytes();
+      final res = await AuthService().updateAvatarFromBytes(
+        imageBytes: bytes,
+        fileName: picked.name,
+      );
+
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+
+      if (res['success'] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Cập nhật ảnh đại diện thành công!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        _fetchLatestProfile();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(res['message'] ?? 'Không thể cập nhật ảnh đại diện'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lỗi chọn ảnh: $e'), backgroundColor: AppColors.error),
+        );
+      }
+    }
+  }
 
   Future<void> _openEditProfile() async {
     final updated = await Navigator.of(context).push<bool>(
@@ -332,19 +439,6 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
         const SizedBox(height: 20),
 
-        // Cấu hình máy chủ backend (kể cả khi chưa đăng nhập)
-        _buildProfileOption(
-          icon: Icons.dns_rounded,
-          title: 'Cấu hình Máy chủ (Backend URL)',
-          subtitle: ApiConfig.baseUrl.replaceAll('/api', ''),
-          onTap: () => showServerConfigDialog(
-            context,
-            onApplied: () {
-              if (mounted) setState(() {});
-            },
-          ),
-        ),
-
         // Khi chưa đăng ký/đăng nhập: chỉ hiển thị mỗi "Trợ giúp & Hỗ trợ"
         _buildProfileOption(
           icon: Icons.help_outline,
@@ -398,14 +492,14 @@ class _ProfilePageState extends State<ProfilePage> {
                           right: 0,
                           bottom: 0,
                           child: GestureDetector(
-                            onTap: _openEditProfile,
+                            onTap: _showAvatarOptions,
                             child: Container(
                               padding: const EdgeInsets.all(6),
                               decoration: const BoxDecoration(
                                 color: AppColors.primaryContainer,
                                 shape: BoxShape.circle,
                               ),
-                              child: const Icon(Icons.camera_alt, size: 16, color: Colors.black),
+                              child: const Icon(Icons.edit, size: 16, color: Colors.black),
                             ),
                           ),
                         ),
@@ -583,20 +677,6 @@ class _ProfilePageState extends State<ProfilePage> {
                     ? 'Tạo mật khẩu để đăng nhập bằng email'
                     : 'Cập nhật mật khẩu bảo mật tài khoản',
                 onTap: _openChangePassword,
-              ),
-              _buildProfileOption(
-                icon: Icons.dns_rounded,
-                title: 'Cấu hình Máy chủ (Backend URL)',
-                subtitle: ApiConfig.baseUrl.replaceAll('/api', ''),
-                onTap: () => showServerConfigDialog(
-                  context,
-                  onApplied: () {
-                    if (mounted) {
-                      setState(() {});
-                      _fetchLatestProfile();
-                    }
-                  },
-                ),
               ),
               _buildProfileOption(
                 icon: Icons.help_outline,
