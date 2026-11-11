@@ -11,6 +11,7 @@ import '../../../../core/models/user_model.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_background.dart';
 import 'payment_page.dart';
+import 'payment_success_page.dart';
 
 class TicketBookingPage extends StatefulWidget {
   final EventModel event;
@@ -1019,17 +1020,41 @@ class _TicketBookingPageState extends State<TicketBookingPage> {
       if (result['success'] == true && result['data'] != null) {
         final orderData = result['data'];
         final orderId = orderData['order']?['id']?.toString() ?? '';
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => PaymentPage(
-              orderId: orderId,
-              initialData: orderData,
-              initialSecondsLeft: _countdownSeconds,
-              expiresAt: _holdExpiresAt,
+        final orderTotal = (orderData['order']?['total_amount'] as num?)?.toDouble() ??
+            (orderData['order']?['total_price'] as num?)?.toDouble() ??
+            _finalPrice;
+        final orderStatus = orderData['order']?['status']?.toString().toUpperCase() ?? '';
+
+        // Nếu tổng miễn phí (0đ) hoặc đơn hàng đã xong: Đến thẳng trang thành công, KHÔNG gọi PayOS
+        if (_finalPrice == 0 || orderTotal == 0 || orderStatus == 'PAID' || orderStatus == 'COMPLETED') {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => PaymentSuccessPage(
+                orderId: orderId,
+                orderData: orderData,
+                event: widget.event,
+                buyerName: buyerName,
+                buyerEmail: buyerEmail,
+                buyerPhone: buyerPhone,
+                totalQuantity: _totalSelectedQuantity,
+                finalPrice: 0,
+              ),
             ),
-          ),
-        );
+          );
+        } else {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => PaymentPage(
+                orderId: orderId,
+                initialData: orderData,
+                initialSecondsLeft: _countdownSeconds,
+                expiresAt: _holdExpiresAt,
+              ),
+            ),
+          );
+        }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -1884,7 +1909,9 @@ class _TicketBookingPageState extends State<TicketBookingPage> {
                       Row(
                         children: [
                           Text(
-                            t.formattedPrice,
+                            t.price == 0
+                                ? (qty > 0 ? 'Miễn phí' : '0đ')
+                                : t.formattedPrice,
                             style: TextStyle(
                               color: isSoldOut ? Colors.white38 : const Color(0xFFE6C17A),
                               fontWeight: FontWeight.bold,
@@ -3377,7 +3404,7 @@ class _TicketBookingPageState extends State<TicketBookingPage> {
                 children: [
                   const Text('Tạm tính', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
                   Text(
-                    _formatCurrency(_subtotalPrice),
+                    _totalSelectedQuantity == 0 ? '0đ' : (_subtotalPrice == 0 ? 'Miễn phí' : _formatCurrency(_subtotalPrice)),
                     style: const TextStyle(color: Color(0xFF06B6D4), fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                 ],
@@ -3402,7 +3429,7 @@ class _TicketBookingPageState extends State<TicketBookingPage> {
                       style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
                     ),
                     Text(
-                      _formatCurrency(_finalPrice),
+                      _totalSelectedQuantity == 0 ? '0đ' : (_finalPrice == 0 ? 'Miễn phí' : _formatCurrency(_finalPrice)),
                       style: const TextStyle(color: Color(0xFFE6C17A), fontSize: 17, fontWeight: FontWeight.bold),
                     ),
                   ],
@@ -3439,7 +3466,11 @@ class _TicketBookingPageState extends State<TicketBookingPage> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                _formatCurrency(_currentStep == 3 ? _finalPrice : _subtotalPrice),
+                                _totalSelectedQuantity == 0
+                                    ? '0đ'
+                                    : ((_currentStep == 3 ? _finalPrice : _subtotalPrice) == 0
+                                        ? 'Miễn phí'
+                                        : _formatCurrency(_currentStep == 3 ? _finalPrice : _subtotalPrice)),
                                 style: const TextStyle(
                                   color: Color(0xFF06B6D4),
                                   fontSize: 18,
@@ -3476,7 +3507,7 @@ class _TicketBookingPageState extends State<TicketBookingPage> {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
                     ),
                     child: Text(
-                      _currentStep == 3 ? 'Thanh toán' : 'Tiếp tục',
+                      _currentStep == 3 ? (_finalPrice == 0 ? 'Xác nhận đặt vé' : 'Thanh toán') : 'Tiếp tục',
                       style: const TextStyle(
                         color: Color(0xFF070D1E),
                         fontSize: 15,
@@ -3505,7 +3536,7 @@ class _TicketBookingPageState extends State<TicketBookingPage> {
         ? 'Tiếp tục'
         : _currentStep == 2
             ? 'Tiếp tục'
-            : 'Thanh toán';
+            : (_finalPrice == 0 ? 'Xác nhận đặt vé' : 'Thanh toán');
     final VoidCallback? onButtonTap = _currentStep == 1
         ? (_totalSelectedQuantity > 0 ? _goToStep2 : null)
         : _currentStep == 2
@@ -3550,7 +3581,9 @@ class _TicketBookingPageState extends State<TicketBookingPage> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        _formatCurrency(displayAmount),
+                        _totalSelectedQuantity == 0
+                            ? '0đ'
+                            : (displayAmount == 0 ? 'Miễn phí' : _formatCurrency(displayAmount)),
                         style: const TextStyle(
                           color: Color(0xFFE6C17A),
                           fontSize: 18,

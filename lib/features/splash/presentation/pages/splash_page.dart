@@ -1,8 +1,13 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import '../../../../core/api/auth_service.dart';
+import '../../../../core/api/staff_service.dart';
+import '../../../../core/models/user_model.dart';
 import '../../../../main.dart';
 import '../../../auth/presentation/pages/login_page.dart';
+import '../../../home/presentation/pages/home_discovery_page.dart';
+import '../../../staff/presentation/pages/staff_dashboard_page.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -15,14 +20,13 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
   // 1. Twinkling stars continuous controller
   late final AnimationController _starsController;
 
-  // 2. Logo Fade In + Slide In From Left controller
-  late final AnimationController _logoController;
-  late final Animation<Offset> _logoSlideAnimation;
-  late final Animation<double> _logoFadeAnimation;
+  // 2. Logo subtle breathing pulse controller
+  late final AnimationController _pulseController;
+  late final Animation<double> _pulseAnimation;
 
-  Timer? _navigationTimer;
   Timer? _fallbackTimer;
   bool _isNavigated = false;
+  late final Future<UserModel?> _sessionFuture;
 
   // Normalized star coordinates and sizes matching the cosmos design
   // (xNorm, yNorm, size, phaseOffset)
@@ -56,97 +60,114 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
   void initState() {
     super.initState();
 
+    // Restore saved session in parallel with splash animation
+    _sessionFuture = AuthService().restoreSession();
+
     // 1. Continuous stars twinkling loop
     _starsController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2200),
     )..repeat();
 
-    // 2. Logo smooth Fade In + Slide In From Left
-    // Starts completely off-screen on the left (-1.4) and glides smoothly into the center
-    _logoController = AnimationController(
+    // 2. Subtle logo breathing pulse
+    _pulseController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1200),
+      duration: const Duration(milliseconds: 1400),
+    )..repeat(reverse: true);
+
+    _pulseAnimation = Tween<double>(begin: 0.97, end: 1.03).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
 
-    _logoSlideAnimation = Tween<Offset>(
-      begin: const Offset(-1.4, 0.0),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _logoController,
-      curve: Curves.easeOutCubic,
-    ));
-
-    // Logo becomes visible quickly during the slide so the motion is prominently seen
-    _logoFadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _logoController,
-      curve: const Interval(0.0, 0.40, curve: Curves.easeIn),
-    ));
-
-    // When logo completes its slide & arrival, wait exactly 2s then navigate to LoginPage
-    _logoController.addStatusListener((status) {
-      if (status == AnimationStatus.completed) {
-        _scheduleLoginNavigation();
-      }
-    });
-
-    // Trigger animation after first frame is drawn
+    // Start background app loading and navigate when ready
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      Future.delayed(const Duration(milliseconds: 150), () {
-        if (!mounted) return;
-        _logoController.forward(from: 0.0);
-      });
+      _loadAppAndNavigate();
     });
 
-    // Fallback timer: guarantees automatic navigation after 3.5s total runtime
-    // (150ms start + 1200ms logo animation + 2000ms wait = 3350ms)
-    _fallbackTimer = Timer(const Duration(milliseconds: 3500), () {
-      _navigateToLogin();
+    // Fallback timer: guarantees automatic navigation after 5s maximum
+    _fallbackTimer = Timer(const Duration(seconds: 5), () {
+      _navigateToNextScreen();
     });
   }
 
-  void _scheduleLoginNavigation() {
-    _navigationTimer?.cancel();
-    _navigationTimer = Timer(const Duration(seconds: 2), () {
-      _navigateToLogin();
-    });
+  Future<void> _loadAppAndNavigate() async {
+    final startTime = DateTime.now();
+
+    // 1. Precache background image
+    if (mounted) {
+      try {
+        await precacheImage(const AssetImage('assets/splash/app_background.png'), context);
+      } catch (_) {}
+    }
+
+    // 2. Wait for session restoration & token validation/refresh
+    UserModel? user;
+    try {
+      user = await _sessionFuture.timeout(const Duration(seconds: 4));
+    } catch (_) {}
+
+    // 3. Ensure a minimum display time of 800ms so the user sees the launch screen smoothly
+    final elapsed = DateTime.now().difference(startTime).inMilliseconds;
+    if (elapsed < 800) {
+      await Future.delayed(Duration(milliseconds: 800 - elapsed));
+    }
+
+    if (!mounted) return;
+    _navigateToNextScreen(preloadedUser: user);
   }
 
   @override
   void reassemble() {
     super.reassemble();
-    // On Hot Reload in development, reset and trigger navigation so it never gets stuck
-    _logoController.forward(from: 0.0);
-    _scheduleLoginNavigation();
+    _loadAppAndNavigate();
   }
 
   @override
   void dispose() {
-    _navigationTimer?.cancel();
     _fallbackTimer?.cancel();
     _starsController.dispose();
-    _logoController.dispose();
+    _pulseController.dispose();
     super.dispose();
   }
 
-  void _navigateToLogin() {
+  Future<void> _navigateToNextScreen({UserModel? preloadedUser}) async {
     if (_isNavigated || !mounted) return;
     _isNavigated = true;
-    _navigationTimer?.cancel();
     _fallbackTimer?.cancel();
 
+    UserModel? user = preloadedUser ?? AuthService().currentUser;
+    if (user == null) {
+      try {
+        user = await _sessionFuture.timeout(const Duration(milliseconds: 600));
+      } catch (_) {}
+    }
+
+    Widget destination;
+    if (user != null) {
+      if (user.canAccessStaff) {
+        bool hasActive = false;
+        try {
+          hasActive = await StaffService()
+              .hasActiveOrUpcomingEvents()
+              .timeout(const Duration(seconds: 4));
+        } catch (_) {}
+        destination = hasActive ? const StaffDashboardPage() : const HomeDiscoveryPage();
+      } else {
+        destination = const HomeDiscoveryPage();
+      }
+    } else {
+      destination = const LoginPage();
+    }
+
+    if (!mounted) return;
     final nav = navigatorKey.currentState ?? Navigator.of(context);
     nav.pushReplacement(
       PageRouteBuilder(
-        pageBuilder: (_, __, ___) => const LoginPage(),
+        pageBuilder: (_, __, ___) => destination,
         transitionsBuilder: (_, animation, __, child) {
           return FadeTransition(opacity: animation, child: child);
         },
-        transitionDuration: const Duration(milliseconds: 600),
+        transitionDuration: const Duration(milliseconds: 500),
       ),
     );
   }
@@ -156,7 +177,7 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
     return Scaffold(
       backgroundColor: const Color(0xFF020716),
       body: GestureDetector(
-        onTap: _navigateToLogin, // Allows tapping to skip splash screen immediately
+        onTap: () => _navigateToNextScreen(), // Allows tapping to skip splash screen immediately
         behavior: HitTestBehavior.translucent,
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -164,12 +185,13 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
             final h = constraints.maxHeight;
 
             // Logo dimensions & vertical centering
-            final logoWidth = w * 0.78;
+            final logoWidth = w * 0.76;
             const logoAspectRatio = 535.0 / 120.0;
             final logoHeight = logoWidth / logoAspectRatio;
 
-            // Exactly centered vertically on the screen
-            final logoTop = (h - logoHeight) / 2;
+            // Total splash block height including indicator
+            const blockExtraHeight = 60.0;
+            final logoTop = (h - (logoHeight + blockExtraHeight)) / 2;
 
             return Stack(
               fit: StackFit.expand,
@@ -186,49 +208,72 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
                 // Layer 1: Animated Twinkling Golden Stars
                 ..._buildTwinklingStars(w, h),
 
-                // Layer 2: 3D Rotating Planets (shifted downwards to frame the centered logo)
+                // Layer 2: 3D Rotating Planets (framing the centered logo)
                 ..._buildRotatingPlanets(w, h),
 
-                // Layer 3: Main Logo + Tagline (Vertically centered, Slide In From Left)
+                // Layer 3: Main Centered Logo + Subtle Cosmic Loader (Immediately visible!)
                 Positioned(
                   top: logoTop,
                   left: (w - logoWidth) / 2,
                   width: logoWidth,
-                  child: SlideTransition(
-                    position: _logoSlideAnimation,
-                    child: FadeTransition(
-                      opacity: _logoFadeAnimation,
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          // Neon cyan flare beam behind logo
-                          Container(
-                            height: 2,
-                            margin: const EdgeInsets.symmetric(horizontal: 16),
-                            decoration: BoxDecoration(
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(0xFF00E5FF).withValues(alpha: 0.85),
-                                  blurRadius: 18,
-                                  spreadRadius: 3,
-                                ),
-                                BoxShadow(
-                                  color: const Color(0xFF0088FF).withValues(alpha: 0.65),
-                                  blurRadius: 32,
-                                  spreadRadius: 6,
-                                ),
-                              ],
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ScaleTransition(
+                        scale: _pulseAnimation,
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            // Neon cyan flare beam behind logo
+                            Container(
+                              height: 2,
+                              margin: const EdgeInsets.symmetric(horizontal: 16),
+                              decoration: BoxDecoration(
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFF00E5FF).withValues(alpha: 0.85),
+                                    blurRadius: 18,
+                                    spreadRadius: 3,
+                                  ),
+                                  BoxShadow(
+                                    color: const Color(0xFF0088FF).withValues(alpha: 0.65),
+                                    blurRadius: 32,
+                                    spreadRadius: 6,
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                          // Logo Image (includes "EVENTHUB" and tagline "YOUR EVENT, YOUR EXPERIENCE")
-                          Image.asset(
-                            'assets/splash/logo_isolated.png',
-                            width: logoWidth,
-                            fit: BoxFit.contain,
-                          ),
-                        ],
+                            // Logo Image (includes EVENTHUB and tagline)
+                            Image.asset(
+                              'assets/splash/logo_isolated.png',
+                              width: logoWidth,
+                              fit: BoxFit.contain,
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: 28),
+                      // Smooth cosmic loading indicator
+                      SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            const Color(0xFF00E5FF).withValues(alpha: 0.85),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        'Đang tải dữ liệu...',
+                        style: TextStyle(
+                          color: const Color(0xFFB0CADD).withValues(alpha: 0.75),
+                          fontSize: 12,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],

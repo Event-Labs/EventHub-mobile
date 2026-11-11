@@ -171,4 +171,94 @@ void main() {
       expect(res, isEmpty);
     });
   });
+
+  group('Staff assigned events normalization & extraction tests', () {
+    test('extractListFromResponse handles direct List', () {
+      final list = [{'id': 'e-1'}];
+      expect(StaffService.extractListFromResponse(list), equals(list));
+    });
+
+    test('extractListFromResponse handles {success: true, data: [...]}', () {
+      final response = {
+        'success': true,
+        'data': [{'id': 'e-1', 'title': 'Không gian trải nghiệm Porsche'}],
+      };
+      final list = StaffService.extractListFromResponse(response);
+      expect(list.length, equals(1));
+      expect(list.first['title'], equals('Không gian trải nghiệm Porsche'));
+    });
+
+    test('extractListFromResponse handles nested {data: {events: [...]}}', () {
+      final response = {
+        'success': true,
+        'data': {
+          'events': [{'id': 'e-porsche', 'title': 'Không gian trải nghiệm Porsche'}],
+          'total': 1,
+        },
+      };
+      final list = StaffService.extractListFromResponse(response);
+      expect(list.length, equals(1));
+      expect(list.first['title'], equals('Không gian trải nghiệm Porsche'));
+    });
+
+    test('extractListFromResponse handles nested {data: {assignments: [...]}}', () {
+      final response = {
+        'status': 'success',
+        'data': {
+          'assignments': [{'id': 'assign-1', 'event_id': 'e-porsche'}],
+        },
+      };
+      final list = StaffService.extractListFromResponse(response);
+      expect(list.length, equals(1));
+      expect(list.first['event_id'], equals('e-porsche'));
+    });
+
+    test('normalizeStaffEvent extracts nested event and preserves assignment gate and role', () {
+      final raw = {
+        'id': 'assignment-999',
+        'event_id': 'event-porsche-123',
+        'role': 'Trưởng cửa soát vé',
+        'gate': 'GATE 02 - VIP Lane',
+        'zone': 'Khu Trải Nghiệm',
+        'status': 'INVITED',
+        'event': {
+          'id': 'event-porsche-123',
+          'title': 'Không gian trải nghiệm Porsche',
+          'name': 'Không gian trải nghiệm Porsche',
+          'venue': {
+            'name': 'Porsche Studio Saigon',
+            'city': 'TP. Hồ Chí Minh',
+          },
+          'start_time': '2026-11-10T09:00:00.000Z',
+          'end_time': '2026-11-12T18:00:00.000Z',
+          'banner_url': 'https://eventhub.vn/porsche.jpg',
+        },
+      };
+
+      final normalized = StaffService.normalizeStaffEvent(raw);
+      expect(normalized['id'], equals('event-porsche-123'));
+      expect(normalized['assignment_id'], equals('assignment-999'));
+      expect(normalized['title'], equals('Không gian trải nghiệm Porsche'));
+      expect(normalized['venue_name'], equals('Porsche Studio Saigon'));
+      expect(normalized['gate'], equals('GATE 02 - VIP Lane'));
+      expect(normalized['zone'], equals('Khu Trải Nghiệm'));
+      expect(normalized['role'], equals('Trưởng cửa soát vé'));
+      expect(normalized['status'], equals('INVITED'));
+      expect(normalized['banner_url'], equals('https://eventhub.vn/porsche.jpg'));
+    });
+
+    test('checkHasActiveOrUpcomingEvents handles normalized events and camelCase dates', () {
+      final now = DateTime(2026, 11, 4, 12, 0, 0);
+      final events = [
+        {
+          'id': 'event-porsche',
+          'title': 'Không gian trải nghiệm Porsche',
+          'startTime': '2026-11-10T09:00:00.000Z',
+          'endTime': '2026-11-12T18:00:00.000Z',
+        },
+      ];
+
+      expect(StaffService.checkHasActiveOrUpcomingEvents(events, referenceTime: now), isTrue);
+    });
+  });
 }
