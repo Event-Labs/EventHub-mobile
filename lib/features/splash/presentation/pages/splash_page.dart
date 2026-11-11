@@ -84,8 +84,8 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
       _loadAppAndNavigate();
     });
 
-    // Fallback timer: guarantees automatic navigation after 2.5s maximum
-    _fallbackTimer = Timer(const Duration(milliseconds: 2500), () {
+    // Fallback timer: guarantees automatic navigation after 5s maximum
+    _fallbackTimer = Timer(const Duration(seconds: 5), () {
       _navigateToNextScreen();
     });
   }
@@ -100,10 +100,10 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
       } catch (_) {}
     }
 
-    // 2. Wait for session restoration
+    // 2. Wait for session restoration & token validation/refresh
     UserModel? user;
     try {
-      user = await _sessionFuture.timeout(const Duration(milliseconds: 1500));
+      user = await _sessionFuture.timeout(const Duration(seconds: 4));
     } catch (_) {}
 
     // 3. Ensure a minimum display time of 800ms so the user sees the launch screen smoothly
@@ -149,7 +149,7 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
         try {
           hasActive = await StaffService()
               .hasActiveOrUpcomingEvents()
-              .timeout(const Duration(milliseconds: 1500));
+              .timeout(const Duration(seconds: 4));
         } catch (_) {}
         destination = hasActive ? const StaffDashboardPage() : const HomeDiscoveryPage();
       } else {

@@ -45,7 +45,7 @@ class UserModel {
     return str;
   }
 
-  static List<String> _extractRolesFromJwt(String? token) {
+  static List<String> extractRolesFromJwt(String? token) {
     if (token == null || token.isEmpty) return [];
     try {
       final parts = token.split('.');
@@ -56,10 +56,10 @@ class UserModel {
       final List<String> extracted = [];
       if (data['roles'] is List) {
         for (final r in data['roles']) {
-          if (r != null) extracted.add(r.toString());
+          if (r != null) extracted.add(r.toString().trim().toUpperCase());
         }
       } else if (data['role'] != null) {
-        extracted.add(data['role'].toString());
+        extracted.add(data['role'].toString().trim().toUpperCase());
       }
       return extracted;
     } catch (_) {
@@ -103,7 +103,7 @@ class UserModel {
 
     // 3. Fallback / supplementary check with JWT token (just like web auth.js does)
     final tokenToInspect = authToken ?? ApiClient().authToken;
-    final jwtRoles = _extractRolesFromJwt(tokenToInspect);
+    final jwtRoles = extractRolesFromJwt(tokenToInspect);
     for (final r in jwtRoles) {
       if (r.trim().isNotEmpty) {
         collectedRoles.add(r.trim().toUpperCase());

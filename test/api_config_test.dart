@@ -59,6 +59,8 @@ void main() {
       expect(ApiConfig.cancelOrder('ord-456'), equals('/orders/ord-456/cancel'));
       expect(ApiConfig.staffTicketDetail('tk-999'), equals('/staff/tickets/tk-999'));
       expect(ApiConfig.staffCheckInTicket('tk-999'), equals('/staff/tickets/tk-999/check-in'));
+      expect(ApiConfig.staffCheckInReport('evt-123'), equals('/operations/staff/check-in-report?event_id=evt-123'));
+      expect(ApiConfig.staffCheckInReport(), equals('/operations/staff/check-in-report'));
       expect(ApiConfig.staffDirectBookingStatus('ord-999'), equals('/orders/staff/direct-booking/ord-999/status'));
     });
   });

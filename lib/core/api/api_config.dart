@@ -85,7 +85,7 @@ class ApiConfig {
   static const String staffAssignedEvents = '/operations/staff/events';
   static String staffCheckInReport([String? eventId]) =>
       eventId != null && eventId.isNotEmpty
-          ? '/operations/staff/check-in-report?eventId=$eventId'
+          ? '/operations/staff/check-in-report?event_id=$eventId'
           : '/operations/staff/check-in-report';
   static const String staffVerifyQr = '/staff/tickets/verify-qr';
   static const String staffCheckInQr = '/staff/tickets/check-in/qr';

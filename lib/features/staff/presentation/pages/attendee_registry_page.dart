@@ -6,6 +6,7 @@ import '../../../../core/api/staff_service.dart';
 import '../../../../core/models/ticket_model.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_background.dart';
+import '../../../auth/presentation/pages/login_page.dart';
 import '../../../home/presentation/pages/home_discovery_page.dart';
 
 class AttendeeRegistryPage extends StatefulWidget {
@@ -35,8 +36,10 @@ class _AttendeeRegistryPageState extends State<AttendeeRegistryPage> {
   Map<String, dynamic>? _selectedEvent;
   bool _isLoadingEvents = true;
   String? _eventsError;
+  bool _requiresRelogin = false;
 
   List<TicketModel> _tickets = [];
+  Map<String, dynamic>? _reportSummary;
   bool _isLoadingTickets = false;
   String? _ticketsError;
   String? _checkinNotice;
@@ -91,16 +94,37 @@ class _AttendeeRegistryPageState extends State<AttendeeRegistryPage> {
     _loadAssignedEvents();
   }
 
+  Future<void> _relogin() async {
+    await AuthService().logout();
+    if (!mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginPage()),
+      (route) => false,
+    );
+  }
+
   Future<void> _loadAssignedEvents() async {
     setState(() {
       _isLoadingEvents = true;
       _eventsError = null;
+      _requiresRelogin = false;
     });
 
     try {
-      final events = await StaffService().getAssignedEvents();
+      final result = await StaffService().getAssignedEventsResult();
       if (!mounted) return;
 
+      if (result['success'] != true) {
+        setState(() {
+          _assignedEvents = [];
+          _isLoadingEvents = false;
+          _requiresRelogin = result['requiresLogin'] == true;
+          _eventsError = result['message']?.toString() ?? 'Không thể tải danh sách sự kiện được phân công.';
+        });
+        return;
+      }
+
+      final events = (result['events'] as List<Map<String, dynamic>>?) ?? [];
       _assignedEvents = events;
       _isLoadingEvents = false;
 
@@ -164,14 +188,8 @@ class _AttendeeRegistryPageState extends State<AttendeeRegistryPage> {
     // Check check-in start time
     final checkinStartStr = event['checkin_start_time'] ?? event['start_time'];
     final checkinStartTime = checkinStartStr != null ? DateTime.tryParse(checkinStartStr.toString()) : null;
-    if (checkinStartTime != null && checkinStartTime.isAfter(DateTime.now())) {
-      setState(() {
-        _tickets = [];
-        _isLoadingTickets = false;
-        _ticketsError = null;
-        _checkinNotice = 'Sự kiện này chưa đến giờ mở check-in.\nThời gian mở check-in dự kiến: ${_dateTimeFormat.format(checkinStartTime.toLocal())}.';
-      });
-      return;
+    if (checkinStartTime != null && checkinStartTime.toUtc().isAfter(DateTime.now().toUtc())) {
+      _checkinNotice = 'Sự kiện này chưa đến giờ mở check-in.\nThời gian mở check-in dự kiến: ${_dateTimeFormat.format(checkinStartTime.toLocal())}.';
     } else {
       _checkinNotice = null;
     }
@@ -179,23 +197,59 @@ class _AttendeeRegistryPageState extends State<AttendeeRegistryPage> {
     setState(() {
       _isLoadingTickets = true;
       _ticketsError = null;
+      _requiresRelogin = false;
     });
 
     try {
-      final results = await StaffService().searchTicketsWithFilters(
+      final q = _searchController.text.trim();
+      final tc = _ticketCodeController.text.trim();
+      final bn = _buyerNameController.text.trim();
+      final be = _buyerEmailController.text.trim();
+      final bp = _buyerPhoneController.text.trim();
+      final hasFilter = q.isNotEmpty || tc.isNotEmpty || bn.isNotEmpty || be.isNotEmpty || bp.isNotEmpty;
+
+      final searchFuture = StaffService().searchTicketsResult(
         eventId: eventId,
-        query: _searchController.text.trim().isNotEmpty ? _searchController.text.trim() : null,
-        ticketCode: _ticketCodeController.text.trim().isNotEmpty ? _ticketCodeController.text.trim() : null,
-        buyerName: _buyerNameController.text.trim().isNotEmpty ? _buyerNameController.text.trim() : null,
-        buyerEmail: _buyerEmailController.text.trim().isNotEmpty ? _buyerEmailController.text.trim() : null,
-        buyerPhone: _buyerPhoneController.text.trim().isNotEmpty ? _buyerPhoneController.text.trim() : null,
+        query: q.isNotEmpty ? q : null,
+        ticketCode: tc.isNotEmpty ? tc : null,
+        buyerName: bn.isNotEmpty ? bn : null,
+        buyerEmail: be.isNotEmpty ? be : null,
+        buyerPhone: bp.isNotEmpty ? bp : null,
       );
+      final reportFuture = !hasFilter
+          ? StaffService().getStaffCheckInReport(eventId)
+          : Future<Map<String, dynamic>?>.value(null);
+
+      final results = await Future.wait<dynamic>([searchFuture, reportFuture]);
+      final res = results[0] as Map<String, dynamic>;
+      final report = results[1] as Map<String, dynamic>?;
+
+      Map<String, dynamic>? reportSummary = _reportSummary;
+      if (report != null) {
+        final summaryMap = report['summary'] is Map
+            ? Map<String, dynamic>.from(report['summary'] as Map)
+            : report;
+        reportSummary = summaryMap;
+      }
 
       if (!mounted) return;
-      setState(() {
-        _tickets = results;
-        _isLoadingTickets = false;
-      });
+      if (res['success'] == true) {
+        setState(() {
+          _tickets = (res['tickets'] as List<TicketModel>?) ?? [];
+          _reportSummary = reportSummary;
+          _isLoadingTickets = false;
+          _ticketsError = null;
+          _requiresRelogin = false;
+        });
+      } else {
+        setState(() {
+          _tickets = [];
+          _reportSummary = reportSummary;
+          _isLoadingTickets = false;
+          _requiresRelogin = res['requiresLogin'] == true;
+          _ticketsError = res['message']?.toString() ?? 'Không thể tải danh sách vé.';
+        });
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -225,28 +279,52 @@ class _AttendeeRegistryPageState extends State<AttendeeRegistryPage> {
     setState(() => _checkingInTicketIds.remove(ticket.ticketId));
 
     if (res['success'] == true) {
-      final updatedTicket = res['ticket'] is TicketModel ? (res['ticket'] as TicketModel) : null;
+      final updatedTicket = res['ticket'] is TicketModel
+          ? (res['ticket'] as TicketModel)
+          : ticket.copyWith(
+              status: 'USED',
+              checkInStatus: 'CHECKED_IN',
+              checkInTime: DateTime.now().toIso8601String(),
+              checkinMethod: 'MANUAL',
+            );
 
-      // Update in local list immediately
+      // Update in local list & summary immediately
       setState(() {
         final idx = _tickets.indexWhere((t) => t.ticketId == ticket.ticketId);
         if (idx != -1) {
-          if (updatedTicket != null) {
-            _tickets[idx] = updatedTicket;
-          } else {
-            // Fallback: reload
-            _fetchTicketsForSelectedEvent();
+          _tickets[idx] = updatedTicket;
+        }
+        if (_reportSummary != null && !ticket.isUsed) {
+          final currentCheckedIn = (_reportSummary!['checked_in'] is num)
+              ? (_reportSummary!['checked_in'] as num).toInt()
+              : int.tryParse(_reportSummary!['checked_in']?.toString() ?? '') ?? 0;
+          final currentRemaining = (_reportSummary!['remaining'] is num)
+              ? (_reportSummary!['remaining'] as num).toInt()
+              : int.tryParse(_reportSummary!['remaining']?.toString() ?? '') ?? 0;
+          _reportSummary!['checked_in'] = currentCheckedIn + 1;
+          if (currentRemaining > 0) {
+            _reportSummary!['remaining'] = currentRemaining - 1;
           }
         }
       });
 
-      _showCheckInSuccessModal(updatedTicket ?? ticket);
+      _showCheckInSuccessModal(updatedTicket);
     } else {
+      final isExpired = res['requiresLogin'] == true;
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(res['message'] ?? 'Không thể soát vé này!'),
           backgroundColor: AppColors.error,
           behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 4),
+          action: isExpired
+              ? SnackBarAction(
+                  label: 'Đăng nhập lại',
+                  textColor: Colors.white,
+                  onPressed: _relogin,
+                )
+              : null,
         ),
       );
     }
@@ -431,12 +509,22 @@ class _AttendeeRegistryPageState extends State<AttendeeRegistryPage> {
                     ),
                     child: Column(
                       children: [
-                        _buildModalRow('Họ & tên', ticket.customerName ?? 'Khách hàng', isBold: true),
-                        const Divider(color: Colors.white10, height: 14),
-                        _buildModalRow('Email', ticket.customerEmail ?? 'Chưa có thông tin'),
-                        if (ticket.attendeePhone != null && ticket.attendeePhone!.isNotEmpty) ...[
+                        _buildModalRow('Người tham dự', ticket.displayPrimaryName, isBold: true),
+                        if (ticket.isDifferentAttendee && ticket.buyerName != null) ...[
                           const Divider(color: Colors.white10, height: 14),
-                          _buildModalRow('Điện thoại', ticket.attendeePhone!),
+                          _buildModalRow('Người mua', ticket.buyerName!),
+                        ],
+                        const Divider(color: Colors.white10, height: 14),
+                        _buildModalRow(
+                          'Email',
+                          ticket.isDifferentAttendee
+                              ? (ticket.attendeeEmail ?? 'Chưa cung cấp')
+                              : (ticket.buyerEmail ?? ticket.attendeeEmail ?? 'Chưa có thông tin'),
+                        ),
+                        if ((ticket.buyerPhone ?? ticket.attendeePhone) != null &&
+                            (ticket.buyerPhone ?? ticket.attendeePhone)!.isNotEmpty) ...[
+                          const Divider(color: Colors.white10, height: 14),
+                          _buildModalRow('Điện thoại', (ticket.buyerPhone ?? ticket.attendeePhone)!),
                         ],
                         const Divider(color: Colors.white10, height: 14),
                         _buildModalRow('Mã vé', ticket.ticketCode, isMono: true),
@@ -449,6 +537,10 @@ class _AttendeeRegistryPageState extends State<AttendeeRegistryPage> {
                         if (ticket.checkInTime != null) ...[
                           const Divider(color: Colors.white10, height: 14),
                           _buildModalRow('Thời gian check-in', _formatCheckinTime(ticket.checkInTime!)),
+                        ],
+                        if (ticket.checkedInByName != null && ticket.checkedInByName!.isNotEmpty) ...[
+                          const Divider(color: Colors.white10, height: 14),
+                          _buildModalRow('Nhân sự soát', ticket.checkedInByName!),
                         ],
                       ],
                     ),
@@ -681,14 +773,14 @@ class _AttendeeRegistryPageState extends State<AttendeeRegistryPage> {
 
   List<TicketModel> get _filteredTickets {
     if (_activeStatusFilter == 'valid') {
-      return _tickets.where((t) => !t.isUsed).toList();
+      return _tickets.where((t) => t.isValid).toList();
     } else if (_activeStatusFilter == 'used') {
       return _tickets.where((t) => t.isUsed).toList();
     }
     return _tickets;
   }
 
-  int get _validCount => _tickets.where((t) => !t.isUsed).length;
+  int get _validCount => _tickets.where((t) => t.isValid).length;
   int get _usedCount => _tickets.where((t) => t.isUsed).length;
 
   Widget _buildModalRow(String label, String value, {bool isBold = false, bool isMono = false, bool highlight = false}) {
@@ -782,11 +874,7 @@ class _AttendeeRegistryPageState extends State<AttendeeRegistryPage> {
                           style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 20),
-                        ElevatedButton(
-                          onPressed: _loadAssignedEvents,
-                          style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryContainer),
-                          child: const Text('Thử lại', style: TextStyle(color: Colors.white)),
-                        ),
+                        _buildErrorActionButtons(onRetry: _loadAssignedEvents),
                       ],
                     ),
                   ),
@@ -1015,17 +1103,42 @@ class _AttendeeRegistryPageState extends State<AttendeeRegistryPage> {
   }
 
   Widget _buildStatusTabs() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      child: Row(
-        children: [
-          _buildFilterChip('Tất cả (${_tickets.length})', 'all'),
-          const SizedBox(width: 8),
-          _buildFilterChip('Chưa soát ($_validCount)', 'valid'),
-          const SizedBox(width: 8),
-          _buildFilterChip('Đã soát ($_usedCount)', 'used'),
-        ],
-      ),
+    final summaryCheckedIn = _reportSummary?['checked_in'];
+    final summaryRemaining = _reportSummary?['remaining'];
+    final summaryTotal = _reportSummary?['total_valid'];
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (_reportSummary != null && summaryTotal != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 2),
+            child: Row(
+              children: [
+                const Icon(Icons.analytics_outlined, color: AppColors.secondary, size: 13),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Toàn sự kiện: ${summaryCheckedIn ?? 0}/${summaryTotal ?? 0} đã soát • ${summaryRemaining ?? 0} chưa soát',
+                    style: const TextStyle(color: AppColors.secondary, fontSize: 11, fontWeight: FontWeight.w500),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          child: Row(
+            children: [
+              _buildFilterChip('Tất cả (${_tickets.length})', 'all'),
+              const SizedBox(width: 8),
+              _buildFilterChip('Chưa soát ($_validCount)', 'valid'),
+              const SizedBox(width: 8),
+              _buildFilterChip('Đã soát ($_usedCount)', 'used'),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -1057,6 +1170,28 @@ class _AttendeeRegistryPageState extends State<AttendeeRegistryPage> {
     );
   }
 
+  Widget _buildErrorActionButtons({required VoidCallback onRetry}) {
+    return Wrap(
+      alignment: WrapAlignment.center,
+      spacing: 12,
+      runSpacing: 8,
+      children: [
+        if (_requiresRelogin)
+          ElevatedButton.icon(
+            onPressed: _relogin,
+            icon: const Icon(Icons.login, color: Colors.white, size: 18),
+            label: const Text('Đăng nhập lại', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+          ),
+        ElevatedButton(
+          onPressed: onRetry,
+          style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryContainer),
+          child: const Text('Thử lại', style: TextStyle(color: Colors.white)),
+        ),
+      ],
+    );
+  }
+
   Widget _buildTicketsList() {
     if (_isLoadingTickets) {
       return const Center(
@@ -1079,11 +1214,7 @@ class _AttendeeRegistryPageState extends State<AttendeeRegistryPage> {
                 style: const TextStyle(color: Colors.white, fontSize: 13),
               ),
               const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: _fetchTicketsForSelectedEvent,
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryContainer),
-                child: const Text('Thử lại', style: TextStyle(color: Colors.white)),
-              ),
+              _buildErrorActionButtons(onRetry: _fetchTicketsForSelectedEvent),
             ],
           ),
         ),
@@ -1150,7 +1281,7 @@ class _AttendeeRegistryPageState extends State<AttendeeRegistryPage> {
                     radius: 20,
                     backgroundColor: isCheckedIn ? Colors.green.withValues(alpha: 0.15) : const Color(0xFF16254E),
                     child: Text(
-                      item.customerName?.isNotEmpty == true ? item.customerName![0].toUpperCase() : 'U',
+                      item.displayPrimaryName.isNotEmpty ? item.displayPrimaryName[0].toUpperCase() : 'U',
                       style: TextStyle(
                         color: isCheckedIn ? Colors.greenAccent : Colors.white,
                         fontWeight: FontWeight.bold,
@@ -1164,7 +1295,7 @@ class _AttendeeRegistryPageState extends State<AttendeeRegistryPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          item.customerName ?? 'Khách hàng',
+                          item.displayPrimaryName,
                           softWrap: true,
                           style: const TextStyle(
                             color: Colors.white,

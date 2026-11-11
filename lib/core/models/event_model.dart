@@ -515,5 +515,6 @@ class EventModel {
   }
 
   String get locationSummary => venue?.summary ?? 'TP. Hồ Chí Minh';
+  String? get venueName => venue?.name;
   String get organizerDisplayName => organizer?.displayName ?? 'Ban tổ chức EventHub';
 }

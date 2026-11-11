@@ -186,7 +186,7 @@ class _FeedbackPageState extends State<FeedbackPage> {
                           SizedBox(width: 12),
                           Expanded(
                             child: Text(
-                              'Bạn chỉ có thể đánh giá các sự kiện đã kết thúc mà bạn đã sở hữu vé hoặc đã check-in tham dự.',
+                              'Bạn có thể đánh giá các sự kiện đã bắt đầu diễn ra hoặc đã kết thúc mà bạn sở hữu vé hoặc đã check-in tham dự.',
                               style: TextStyle(color: Color(0xFFB0CADD), fontSize: 12, height: 1.3),
                             ),
                           ),

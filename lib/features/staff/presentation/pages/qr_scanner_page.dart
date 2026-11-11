@@ -5,6 +5,7 @@ import '../../../../core/api/staff_service.dart';
 import '../../../../core/models/ticket_model.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_background.dart';
+import '../../../auth/presentation/pages/login_page.dart';
 
 class QrScannerPage extends StatefulWidget {
   final String? initialGate;
@@ -40,9 +41,11 @@ class _QrScannerPageState extends State<QrScannerPage> with SingleTickerProvider
   bool _isTorchOn = false;
   Map<String, dynamic>? _lastScanResult;
   DateTime? _lastScannedTime;
+  String? _lastScannedCode;
 
   // Active verified ticket state (displayed in-page card for seamless continuous scanning)
   String? _currentProcessingCode;
+  String? _scannedRawQr;
   Map<String, dynamic>? _activeVerifyResult;
   TicketModel? _activeTicket;
   bool _isCheckingIn = false;
@@ -73,6 +76,7 @@ class _QrScannerPageState extends State<QrScannerPage> with SingleTickerProvider
       detectionSpeed: DetectionSpeed.normal,
       detectionTimeoutMs: 500,
       facing: CameraFacing.back,
+      formats: const [BarcodeFormat.qrCode],
       torchEnabled: false,
       returnImage: false,
     );
@@ -81,6 +85,15 @@ class _QrScannerPageState extends State<QrScannerPage> with SingleTickerProvider
       vsync: this,
       duration: const Duration(milliseconds: 2000),
     )..repeat(reverse: true);
+  }
+
+  Future<void> _relogin() async {
+    await AuthService().logout();
+    if (!mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginPage()),
+      (route) => false,
+    );
   }
 
   @override
@@ -98,25 +111,25 @@ class _QrScannerPageState extends State<QrScannerPage> with SingleTickerProvider
     for (final barcode in barcodes) {
       final raw = barcode.rawValue;
       if (raw == null) continue;
-      final code = raw.trim();
+      final code = StaffService.normalizeRawQrInput(raw);
       if (code.isEmpty) continue;
 
       final now = DateTime.now();
 
-      // If camera is still pointed at the current ticket card:
-      // Debounce for 3.5s so we do not re-verify the same ticket repeatedly
-      if (code == _currentProcessingCode && _activeVerifyResult != null) {
+      // Debounce identical QR code (whether currently displayed or failed verification)
+      // so holding camera over the same ticket doesn't repeatedly spam verify requests.
+      if (code == _lastScannedCode || code == _scannedRawQr || code == _currentProcessingCode) {
         if (_lastScannedTime != null && now.difference(_lastScannedTime!).inMilliseconds < 3500) {
           continue;
         }
       } else {
-        // If presenting a NEW/DIFFERENT ticket:
-        // Immediate recognition with a crisp 600ms debounce
+        // Immediate recognition for a different ticket with 600ms debounce
         if (_lastScannedTime != null && now.difference(_lastScannedTime!).inMilliseconds < 600) {
           continue;
         }
       }
 
+      _lastScannedCode = code;
       _lastScannedTime = now;
       _processTicketCode(code);
       break;
@@ -132,12 +145,13 @@ class _QrScannerPageState extends State<QrScannerPage> with SingleTickerProvider
 
     setState(() {
       _isProcessing = true;
+      _scannedRawQr = cleanCode;
       _currentProcessingCode = effectiveCode;
       _checkInError = null;
     });
 
     try {
-      // 1. Chỉ lấy và xác thực thông tin vé trước, KHÔNG tự ý check-in ngay
+      // 1. Chỉ lấy và xác thực thông tin vé trước, KHÔNG tự ý check-in ngay (giống Web StaffQrCheckInPage)
       final verifyRes = await StaffService().verifyQr(cleanCode);
 
       if (!mounted) return;
@@ -150,6 +164,7 @@ class _QrScannerPageState extends State<QrScannerPage> with SingleTickerProvider
           _isProcessing = false;
           _activeVerifyResult = verifyRes;
           _activeTicket = ticket;
+          _scannedRawQr = cleanCode;
           _currentProcessingCode = ticket.ticketCode;
           _justCheckedIn = false;
           _checkInError = null;
@@ -159,16 +174,22 @@ class _QrScannerPageState extends State<QrScannerPage> with SingleTickerProvider
           };
         });
       } else {
-        final friendlyMsg = StaffService.sanitizeStaffMessage(
-          verifyRes['message'],
-          defaultMsg: 'Vé không tồn tại trong hệ thống hoặc mã QR không hợp lệ.',
-        );
+        final isExpired = verifyRes['requiresLogin'] == true;
+        final rawMsg = verifyRes['raw_message']?.toString() ?? verifyRes['message']?.toString() ?? '';
+        final friendlyMsg = isExpired
+            ? (verifyRes['message']?.toString() ?? 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.')
+            : StaffService.sanitizeStaffMessage(
+                rawMsg,
+                defaultMsg: 'Vé không tồn tại trong hệ thống hoặc mã QR không hợp lệ.',
+              );
+        debugPrint('[QrScannerPage] verifyQr failed (status=${verifyRes['statusCode']}, code=${verifyRes['errorCode']}): $friendlyMsg');
 
         setState(() {
           _isProcessing = false;
           _activeVerifyResult = null;
           _activeTicket = null;
           _currentProcessingCode = null;
+          _scannedRawQr = null;
           _justCheckedIn = false;
           _checkInError = null;
           _lastScanResult = {
@@ -177,28 +198,14 @@ class _QrScannerPageState extends State<QrScannerPage> with SingleTickerProvider
           };
         });
 
-        // Báo lỗi rõ ràng bằng SnackBar nổi cho nhân viên
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.cancel_rounded, color: Colors.white, size: 22),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    friendlyMsg,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white),
-                  ),
-                ),
-              ],
-            ),
-            backgroundColor: AppColors.error,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            duration: const Duration(seconds: 3),
-          ),
-        );
+        // Nếu vé chưa đến giờ tham gia, hiển thị dialog thông báo nổi bật giống web Modal
+        if (friendlyMsg == 'Vé này chưa đến giờ tham gia.' ||
+            friendlyMsg.toLowerCase().contains('chưa đến giờ') ||
+            rawMsg.toLowerCase().contains('chưa đến giờ')) {
+          _showNotYetOpenDialog(friendlyMsg);
+        } else {
+          _showErrorSnackBar(friendlyMsg, isExpired: isExpired);
+        }
       }
     } catch (e) {
       if (!mounted) return;
@@ -208,6 +215,7 @@ class _QrScannerPageState extends State<QrScannerPage> with SingleTickerProvider
         _activeVerifyResult = null;
         _activeTicket = null;
         _currentProcessingCode = null;
+        _scannedRawQr = null;
         _justCheckedIn = false;
         _checkInError = null;
         _lastScanResult = {
@@ -230,8 +238,9 @@ class _QrScannerPageState extends State<QrScannerPage> with SingleTickerProvider
 
   Future<void> _handleConfirmCheckIn() async {
     final ticket = _activeTicket;
-    final code = _currentProcessingCode;
-    if (ticket == null || code == null || _isCheckingIn) return;
+    final rawQr = _scannedRawQr;
+    final code = _currentProcessingCode ?? ticket?.ticketCode;
+    if (ticket == null || _isCheckingIn) return;
 
     setState(() {
       _isCheckingIn = true;
@@ -240,8 +249,15 @@ class _QrScannerPageState extends State<QrScannerPage> with SingleTickerProvider
 
     try {
       final cleanGate = _selectedGate.split(' - ').first;
-      var checkInRes = await StaffService().checkInByQr(code, gate: cleanGate);
-      if (checkInRes['success'] != true && ticket.ticketId.isNotEmpty) {
+
+      // Matches Web StaffQrCheckInPage: checkInTicketByQr({ qrCode: scannedQrValue })
+      // Only use manualCheckIn when no QR string was scanned. Never fall back to manual check-in on QR errors.
+      final Map<String, dynamic> checkInRes;
+      if (rawQr != null && rawQr.isNotEmpty) {
+        checkInRes = await StaffService().checkInByQr(rawQr, gate: cleanGate);
+      } else if (code != null && code.isNotEmpty) {
+        checkInRes = await StaffService().checkInByQr(code, gate: cleanGate);
+      } else {
         checkInRes = await StaffService().manualCheckIn(ticket.ticketId, gate: cleanGate);
       }
 
@@ -252,7 +268,9 @@ class _QrScannerPageState extends State<QrScannerPage> with SingleTickerProvider
             ? (checkInRes['ticket'] as TicketModel)
             : ticket.copyWith(
                 status: 'USED',
+                checkInStatus: 'CHECKED_IN',
                 checkInTime: DateTime.now().toIso8601String(),
+                checkinMethod: 'QR',
               );
 
         setState(() {
@@ -266,9 +284,16 @@ class _QrScannerPageState extends State<QrScannerPage> with SingleTickerProvider
           };
         });
       } else {
-        final friendlyMsg = StaffService.sanitizeStaffMessage(
-          checkInRes['message'],
-          defaultMsg: 'Check-in thất bại!',
+        final isExpired = checkInRes['requiresLogin'] == true;
+        final rawMsg = checkInRes['raw_message'] ?? checkInRes['message'];
+        final friendlyMsg = isExpired
+            ? (checkInRes['message']?.toString() ?? 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.')
+            : StaffService.sanitizeStaffMessage(
+                rawMsg,
+                defaultMsg: 'Check-in thất bại!',
+              );
+        debugPrint(
+          '[QrScannerPage] checkInByQr failed (status=${checkInRes['statusCode']}, code=${checkInRes['errorCode']}): $friendlyMsg',
         );
         setState(() {
           _isCheckingIn = false;
@@ -278,6 +303,9 @@ class _QrScannerPageState extends State<QrScannerPage> with SingleTickerProvider
             'message': friendlyMsg,
           };
         });
+        if (isExpired) {
+          _showErrorSnackBar(friendlyMsg, isExpired: true);
+        }
       }
     } catch (e) {
       if (!mounted) return;
@@ -288,15 +316,156 @@ class _QrScannerPageState extends State<QrScannerPage> with SingleTickerProvider
     }
   }
 
+  void _showErrorSnackBar(String friendlyMsg, {required bool isExpired}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.cancel_rounded, color: Colors.white, size: 22),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                friendlyMsg,
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: AppColors.error,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        duration: Duration(seconds: isExpired ? 5 : 3),
+        action: isExpired
+            ? SnackBarAction(
+                label: 'Đăng nhập lại',
+                textColor: Colors.white,
+                onPressed: _relogin,
+              )
+            : null,
+      ),
+    );
+  }
+
   void _dismissActiveTicketCard() {
     setState(() {
       _activeVerifyResult = null;
       _activeTicket = null;
       _currentProcessingCode = null;
+      _scannedRawQr = null;
+      _lastScannedCode = null;
+      _lastScannedTime = null;
       _isCheckingIn = false;
       _justCheckedIn = false;
       _checkInError = null;
     });
+  }
+
+  void _showNotYetOpenDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1708),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: const BorderSide(color: Color(0xFFF59E0B), width: 1.5),
+        ),
+        title: const Row(
+          children: [
+            Icon(Icons.shield_outlined, color: Color(0xFFF59E0B), size: 28),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Chưa Đến Giờ Check-in',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 17),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.4)),
+              ),
+              child: const Text(
+                'CHƯA ĐẾN GIỜ CHECK-IN',
+                style: TextStyle(
+                  color: Color(0xFFF59E0B),
+                  fontWeight: FontWeight.w800,
+                  fontSize: 11,
+                  letterSpacing: 0.8,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              message,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Vé hợp lệ nhưng cổng check-in của sự kiện hiện chưa mở.',
+              style: TextStyle(color: Colors.white70, fontSize: 13),
+            ),
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.white12),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.access_time_filled, color: Color(0xFFF59E0B), size: 20),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Vui lòng thử lại sau',
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          'Chờ đến thời gian check-in do ban tổ chức thiết lập, sau đó quét lại mã vé này.',
+                          style: TextStyle(color: Colors.white60, fontSize: 11),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFF59E0B),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text(
+              'Đã hiểu',
+              style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showManualInputDialog() {
@@ -325,7 +494,7 @@ class _QrScannerPageState extends State<QrScannerPage> with SingleTickerProvider
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'Nhập chuỗi mã vé hoặc mã đơn hàng nếu camera không nhận diện được.',
+                'Nhập chuỗi mã QR hoặc mã vé nếu camera không nhận diện được.',
                 style: TextStyle(color: AppColors.secondary, fontSize: 12),
               ),
               const SizedBox(height: 14),
@@ -341,25 +510,15 @@ class _QrScannerPageState extends State<QrScannerPage> with SingleTickerProvider
                   child: TextField(
                     controller: _manualCodeController,
                     autofocus: true,
-                    textCapitalization: TextCapitalization.characters,
-                    style: const TextStyle(color: Colors.white, fontFamily: 'monospace', fontWeight: FontWeight.bold, fontSize: 15),
+                    style: const TextStyle(color: Colors.white, fontFamily: 'monospace', fontWeight: FontWeight.bold, fontSize: 14),
                     decoration: const InputDecoration(
-                      hintText: 'TICK-XXXX-XXXX',
+                      hintText: 'EH-XXXXXXXX hoặc chuỗi QR',
                       hintStyle: TextStyle(color: Colors.white30, fontSize: 13),
                       border: InputBorder.none,
                       isDense: true,
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 6,
-                children: [
-                  _buildQuickChip('TICK-NEON-8842', 'Vé VIP 1'),
-                  _buildQuickChip('TICK-BASS-4921', 'Vé GA 2'),
-                ],
               ),
             ],
           ),
@@ -385,20 +544,6 @@ class _QrScannerPageState extends State<QrScannerPage> with SingleTickerProvider
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildQuickChip(String code, String label) {
-    return ActionChip(
-      backgroundColor: const Color(0xFF1E293B),
-      label: Text(
-        '$label ($code)',
-        softWrap: true,
-        style: const TextStyle(color: AppColors.secondary, fontSize: 11),
-      ),
-      onPressed: () {
-        _manualCodeController.text = code;
-      },
     );
   }
 
@@ -520,57 +665,6 @@ class _QrScannerPageState extends State<QrScannerPage> with SingleTickerProvider
     );
   }
 
-  Widget _buildDetailRow(
-    String label,
-    String value, {
-    IconData? icon,
-    bool highlight = false,
-    Color? valueColor,
-    Widget? valueWidget,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (icon != null) ...[
-            Padding(
-              padding: const EdgeInsets.only(top: 2),
-              child: Icon(icon, size: 14, color: AppColors.secondary),
-            ),
-            const SizedBox(width: 6),
-          ],
-          Flexible(
-            flex: 2,
-            child: Text(
-              label,
-              style: const TextStyle(color: AppColors.secondary, fontSize: 11),
-              softWrap: true,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            flex: 3,
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: valueWidget ??
-                  Text(
-                    value,
-                    textAlign: TextAlign.end,
-                    softWrap: true,
-                    style: TextStyle(
-                      color: valueColor ?? (highlight ? AppColors.primaryContainer : Colors.white),
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                      fontFamily: highlight ? 'monospace' : null,
-                    ),
-                  ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildStatusBadge(String text, Color color) {
     return Container(
@@ -732,12 +826,12 @@ class _QrScannerPageState extends State<QrScannerPage> with SingleTickerProvider
                         Expanded(
                           child: _buildCompactItem(
                             icon: Icons.person_outline,
-                            label: 'Khách hàng',
-                            value: (current?.customerName != null && current!.customerName!.isNotEmpty)
-                                ? current.customerName!
-                                : 'Khách vãng lai',
-                            subValue: (current?.customerEmail != null && current!.customerEmail!.isNotEmpty)
-                                ? current.customerEmail!
+                            label: 'Người tham dự',
+                            value: current != null ? current.displayPrimaryName : 'Khách vãng lai',
+                            subValue: current != null
+                                ? (current.isDifferentAttendee
+                                    ? (current.attendeeEmail ?? 'Chưa cung cấp email')
+                                    : (current.buyerEmail ?? current.attendeeEmail))
                                 : null,
                           ),
                         ),
@@ -818,7 +912,7 @@ class _QrScannerPageState extends State<QrScannerPage> with SingleTickerProvider
                                         : (canCheckIn ? 'CHƯA CHECK-IN' : (current?.formattedStatus ?? 'KHÔNG HỢP LỆ')),
                                     primaryColor,
                                   ),
-                                  if (isAlreadyCheckedIn && current != null && current.formattedCheckInTime.isNotEmpty) ...[
+                                  if (isAlreadyCheckedIn && current.formattedCheckInTime.isNotEmpty) ...[
                                     const SizedBox(width: 4),
                                     Expanded(
                                       child: Text(
@@ -892,7 +986,7 @@ class _QrScannerPageState extends State<QrScannerPage> with SingleTickerProvider
                               )
                             : const Icon(Icons.how_to_reg, color: Colors.white, size: 18),
                         label: Text(
-                          _isCheckingIn ? 'ĐANG CHECK-IN...' : 'XÁC NHẬN CHECK-IN ()',
+                          _isCheckingIn ? 'ĐANG CHECK-IN...' : 'XÁC NHẬN CHECK-IN',
                           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                         ),
                         style: ElevatedButton.styleFrom(
@@ -956,6 +1050,25 @@ class _QrScannerPageState extends State<QrScannerPage> with SingleTickerProvider
             child: MobileScanner(
               controller: _scannerController,
               onDetect: _onDetect,
+              errorBuilder: (context, error) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.videocam_off_rounded, color: AppColors.error, size: 48),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Không thể bật camera quét mã QR (${error.errorCode.name}).\nHãy cấp quyền Camera hoặc dùng nút Nhập Mã Thủ Công bên dưới.',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.white70, fontSize: 13),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
             ),
           ),
 
@@ -1210,50 +1323,26 @@ class _QrScannerPageState extends State<QrScannerPage> with SingleTickerProvider
                 : SafeArea(
                     child: Padding(
                       padding: const EdgeInsets.all(14),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: _showManualInputDialog,
-                              icon: const Icon(Icons.keyboard, color: Colors.white, size: 18),
-                              label: const Text(
-                                'Nhập Mã Thủ Công',
-                                softWrap: true,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF0C1446).withValues(alpha: 0.9),
-                                padding: const EdgeInsets.symmetric(vertical: 12),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  side: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
-                                ),
-                              ),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: _showManualInputDialog,
+                          icon: const Icon(Icons.keyboard, color: Colors.white, size: 18),
+                          label: const Text(
+                            'Nhập Mã Vé / QR Thủ Công',
+                            softWrap: true,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF0C1446).withValues(alpha: 0.92),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              side: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
                             ),
                           ),
-                          const SizedBox(width: 10),
-                          ElevatedButton(
-                            onPressed: () => _processTicketCode('TICK-NEON-8842'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primaryContainer,
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            ),
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.bolt, color: Colors.white, size: 16),
-                                SizedBox(width: 4),
-                                Text(
-                                  'Test Vé',
-                                  softWrap: true,
-                                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
                     ),
                   ),

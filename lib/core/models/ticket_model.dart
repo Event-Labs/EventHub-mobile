@@ -61,10 +61,18 @@ class TicketModel {
   final String? attendeeName;
   final String? attendeeEmail;
   final String? attendeePhone;
+  final String? rawAttendeeName;
+  final String? rawAttendeeEmail;
+  final String? buyerName;
+  final String? buyerEmail;
+  final String? buyerPhone;
   final String? orderCode;
   final double? price;
   final double? originalPrice;
   final String? checkInTime;
+  final String? checkinMethod;
+  final String? checkedInByName;
+  final String? checkedInByEmail;
   final TicketVenueModel? venue;
   final Map<String, dynamic>? refundPolicy;
 
@@ -90,10 +98,18 @@ class TicketModel {
     String? customerName,
     String? customerEmail,
     this.attendeePhone,
+    this.rawAttendeeName,
+    this.rawAttendeeEmail,
+    this.buyerName,
+    this.buyerEmail,
+    this.buyerPhone,
     this.orderCode,
     this.price,
     this.originalPrice,
     this.checkInTime,
+    this.checkinMethod,
+    this.checkedInByName,
+    this.checkedInByEmail,
     this.venue,
     this.refundPolicy,
   })  : attendeeName = attendeeName ?? customerName,
@@ -102,23 +118,51 @@ class TicketModel {
   String? get customerName => attendeeName;
   String? get customerEmail => attendeeEmail;
 
+  /// Whether ticket attendee differs from order buyer (matches Web normalizeTicket)
+  bool get isDifferentAttendee {
+    final raw = rawAttendeeName?.trim().toLowerCase() ?? '';
+    final buyer = buyerName?.trim().toLowerCase() ?? '';
+    return raw.isNotEmpty && buyer.isNotEmpty && raw != buyer;
+  }
+
+  String get displayPrimaryName {
+    final a = attendeeName?.trim() ?? '';
+    if (a.isNotEmpty && a != 'Khách hàng') return a;
+    final b = buyerName?.trim() ?? '';
+    if (b.isNotEmpty) return b;
+    return a.isNotEmpty ? a : 'Khách hàng';
+  }
+
+  static String? _nonEmptyString(dynamic value) {
+    if (value == null) return null;
+    final str = value.toString().trim();
+    return str.isEmpty ? null : str;
+  }
+
   factory TicketModel.fromJson(Map<String, dynamic> json) {
     // Nested event
     Map<String, dynamic>? evt;
     if (json['event'] is Map) {
-      evt = json['event'];
+      evt = Map<String, dynamic>.from(json['event'] as Map);
     }
 
     // Nested session
     Map<String, dynamic>? sess;
     if (json['session'] is Map) {
-      sess = json['session'];
+      sess = Map<String, dynamic>.from(json['session'] as Map);
     }
+
+    final Map<String, dynamic>? buyer =
+        json['buyer'] is Map ? Map<String, dynamic>.from(json['buyer'] as Map) : null;
+    final Map<String, dynamic>? order =
+        json['order'] is Map ? Map<String, dynamic>.from(json['order'] as Map) : null;
+    final Map<String, dynamic>? checkedInBy =
+        json['checked_in_by'] is Map ? Map<String, dynamic>.from(json['checked_in_by'] as Map) : null;
 
     // Nested venue
     TicketVenueModel? venueModel;
     if (json['venue'] is Map) {
-      venueModel = TicketVenueModel.fromJson(json['venue']);
+      venueModel = TicketVenueModel.fromJson(Map<String, dynamic>.from(json['venue'] as Map));
     } else if (json['venue_name'] != null || json['venue_address'] != null) {
       venueModel = TicketVenueModel.fromJson(json);
     }
@@ -128,21 +172,20 @@ class TicketModel {
     String? typeId;
     double? rawPrice;
     if (json['ticket_type'] is Map) {
-      typeName = json['ticket_type']['name']?.toString();
-      typeId = json['ticket_type']['id']?.toString();
+      typeName = _nonEmptyString(json['ticket_type']['name']);
+      typeId = _nonEmptyString(json['ticket_type']['id']);
       rawPrice = json['ticket_type']['price'] != null ? double.tryParse(json['ticket_type']['price'].toString()) : null;
     }
 
     // Seat label
     String? seatLabel;
     if (json['seat'] is Map) {
-      seatLabel = json['seat']['label']?.toString();
+      seatLabel = _nonEmptyString(json['seat']['label']) ??
+          _nonEmptyString('${json['seat']['row_label'] ?? ''}${json['seat']['seat_number'] ?? ''}');
     } else if (json['row_label'] != null || json['seat_number'] != null) {
-      seatLabel = '${json['row_label'] ?? ''}${json['seat_number'] ?? ''}'.trim();
+      seatLabel = _nonEmptyString('${json['row_label'] ?? ''}${json['seat_number'] ?? ''}');
     }
-    if (seatLabel == null || seatLabel.isEmpty) {
-      seatLabel = json['seat_name']?.toString() ?? 'Khu vực tự do (GA)';
-    }
+    seatLabel ??= _nonEmptyString(json['seat_name']) ?? 'Khu vực tự do (GA)';
 
     // Actual price vs unit price
     double? actualPrice = rawPrice;
@@ -157,46 +200,93 @@ class TicketModel {
     actualPrice ??= json['price'] != null ? double.tryParse(json['price'].toString()) : 0.0;
     rawPrice ??= actualPrice;
 
-    final code = json['ticket_code']?.toString() ?? json['code']?.toString() ?? 'TICK-0000';
-    final qr = json['qr_code']?.toString() ?? code;
+    final code = _nonEmptyString(json['ticket_code']) ??
+        _nonEmptyString(json['ticketCode']) ??
+        _nonEmptyString(json['code']) ??
+        'TICK-0000';
+    final qr = _nonEmptyString(json['qr_code']) ?? _nonEmptyString(json['qrCode']) ?? code;
 
     // Order code
-    String? orderCodeStr = json['order_code']?.toString();
-    if (orderCodeStr == null && json['order'] is Map) {
-      orderCodeStr = json['order']['order_code']?.toString();
-    }
+    final orderCodeStr = _nonEmptyString(json['order_code']) ?? _nonEmptyString(order?['order_code']);
+
+    final rawAttName = _nonEmptyString(json['raw_attendee_name']);
+    final rawAttEmail = _nonEmptyString(json['raw_attendee_email']);
+    final bName = _nonEmptyString(json['buyer_name']) ??
+        _nonEmptyString(buyer?['name']) ??
+        _nonEmptyString(order?['buyer_name']) ??
+        _nonEmptyString(json['buyerName']);
+    final bEmail = _nonEmptyString(json['buyer_email']) ??
+        _nonEmptyString(buyer?['email']) ??
+        _nonEmptyString(order?['buyer_email']) ??
+        _nonEmptyString(json['buyerEmail']);
+    final bPhone = _nonEmptyString(json['buyer_phone']) ??
+        _nonEmptyString(buyer?['phone']) ??
+        _nonEmptyString(order?['buyer_phone']) ??
+        _nonEmptyString(json['buyerPhone']);
+
+    final effAttName = rawAttName ??
+        _nonEmptyString(json['attendee_name']) ??
+        _nonEmptyString(json['attendeeName']) ??
+        _nonEmptyString(json['customer_name']) ??
+        bName ??
+        'Khách hàng';
+    final effAttEmail = rawAttEmail ??
+        _nonEmptyString(json['attendee_email']) ??
+        _nonEmptyString(json['attendeeEmail']) ??
+        _nonEmptyString(json['customer_email']) ??
+        bEmail;
+    final effPhone = _nonEmptyString(json['attendee_phone']) ??
+        _nonEmptyString(json['customer_phone']) ??
+        bPhone;
 
     return TicketModel(
-      ticketId: json['id']?.toString() ?? json['ticketId']?.toString() ?? '',
+      ticketId: _nonEmptyString(json['id']) ?? _nonEmptyString(json['ticketId']) ?? _nonEmptyString(json['ticket_id']) ?? '',
       ticketCode: code,
       qrCode: qr,
-      eventId: evt?['id']?.toString() ?? json['event_id']?.toString() ?? '',
-      eventName: evt?['title']?.toString() ?? json['event_title']?.toString() ?? json['eventName']?.toString() ?? 'Sự kiện EventHub',
-      eventBanner: evt?['banner_url']?.toString() ?? evt?['thumbnail_url']?.toString() ?? json['cover_image_url']?.toString() ?? json['banner_url']?.toString(),
-      ticketTypeId: typeId ?? json['ticket_type_id']?.toString(),
-      ticketType: typeName ?? json['ticket_type_name']?.toString() ?? json['ticketType']?.toString() ?? 'Vé tham dự',
+      eventId: _nonEmptyString(evt?['id']) ?? _nonEmptyString(json['event_id']) ?? '',
+      eventName: _nonEmptyString(evt?['title']) ??
+          _nonEmptyString(json['event_title']) ??
+          _nonEmptyString(json['eventName']) ??
+          'Sự kiện EventHub',
+      eventBanner: _nonEmptyString(evt?['banner_url']) ??
+          _nonEmptyString(evt?['thumbnail_url']) ??
+          _nonEmptyString(json['cover_image_url']) ??
+          _nonEmptyString(json['banner_url']),
+      ticketTypeId: typeId ?? _nonEmptyString(json['ticket_type_id']),
+      ticketType: typeName ??
+          _nonEmptyString(json['ticket_type_name']) ??
+          _nonEmptyString(json['ticketType']) ??
+          'Vé tham dự',
       seatName: seatLabel,
-      sessionId: sess?['id']?.toString() ?? json['event_session_id']?.toString(),
-      sessionName: sess?['name']?.toString() ?? json['session_name']?.toString(),
-      sessionTime: sess?['start_time']?.toString() ?? json['session_start_time']?.toString() ?? json['sessionTime']?.toString(),
-      sessionEndTime: sess?['end_time']?.toString() ?? json['session_end_time']?.toString(),
-      checkinStartTime: sess?['checkin_start_time']?.toString() ?? json['checkin_start_time']?.toString(),
-      status: json['status']?.toString().toUpperCase() ?? 'VALID',
-      checkInStatus: json['check_in_status']?.toString().toUpperCase(),
-      attendeeName: json['attendee_name']?.toString() ?? json['customer_name']?.toString() ?? json['buyer_name']?.toString() ?? 'Khách hàng',
-      attendeeEmail: json['attendee_email']?.toString() ?? json['customer_email']?.toString() ?? json['buyer_email']?.toString(),
-      attendeePhone: json['attendee_phone']?.toString() ?? json['customer_phone']?.toString(),
+      sessionId: _nonEmptyString(sess?['id']) ?? _nonEmptyString(json['event_session_id']),
+      sessionName: _nonEmptyString(sess?['name']) ?? _nonEmptyString(sess?['session_name']) ?? _nonEmptyString(json['session_name']),
+      sessionTime: _nonEmptyString(sess?['start_time']) ?? _nonEmptyString(json['session_start_time']) ?? _nonEmptyString(json['sessionTime']),
+      sessionEndTime: _nonEmptyString(sess?['end_time']) ?? _nonEmptyString(json['session_end_time']),
+      checkinStartTime: _nonEmptyString(sess?['checkin_start_time']) ?? _nonEmptyString(json['checkin_start_time']),
+      status: _nonEmptyString(json['status'])?.toUpperCase() ?? 'VALID',
+      checkInStatus: _nonEmptyString(json['check_in_status'])?.toUpperCase(),
+      attendeeName: effAttName,
+      attendeeEmail: effAttEmail,
+      attendeePhone: effPhone,
+      rawAttendeeName: rawAttName ?? _nonEmptyString(json['attendee_name']),
+      rawAttendeeEmail: rawAttEmail ?? _nonEmptyString(json['attendee_email']),
+      buyerName: bName,
+      buyerEmail: bEmail,
+      buyerPhone: bPhone,
       orderCode: orderCodeStr,
       price: actualPrice,
       originalPrice: rawPrice,
-      checkInTime: json['checked_in_at']?.toString() ?? json['check_in_time']?.toString(),
+      checkInTime: _nonEmptyString(json['checked_in_at']) ?? _nonEmptyString(json['check_in_time']),
+      checkinMethod: _nonEmptyString(json['checkin_method']),
+      checkedInByName: _nonEmptyString(checkedInBy?['name']) ?? _nonEmptyString(checkedInBy?['full_name']) ?? _nonEmptyString(json['checked_in_by_name']),
+      checkedInByEmail: _nonEmptyString(checkedInBy?['email']) ?? _nonEmptyString(json['checked_in_by_email']),
       venue: venueModel,
       refundPolicy: evt?['refund_policy'] is Map ? evt!['refund_policy'] : null,
     );
   }
 
   // Status checks aligning with backend
-  bool get isUsed => status == 'USED' || checkInStatus == 'CHECKED_IN' || checkInTime != null;
+  bool get isUsed => status == 'USED' || checkInStatus == 'CHECKED_IN' || (checkInTime != null && checkInTime!.trim().isNotEmpty);
   bool get isExpired => status == 'EXPIRED';
   bool get isRefundPending => status == 'REFUND_PENDING' || status == 'REFUND_REQUESTED';
   bool get isRefundRequested => isRefundPending;
@@ -265,21 +355,34 @@ class TicketModel {
     }
   }
 
-  String get qrPayload {
+  /// Compact QR payload matching Web (TicketDetailPage / StaffDirectBookingPage / tickets.service.js)
+  static String buildQrPayload({
+    required String ticketCode,
+    String? qrCode,
+    String? ticketId,
+  }) {
+    final ref = ticketCode.trim().isNotEmpty
+        ? ticketCode.trim()
+        : ((qrCode ?? '').trim().isNotEmpty ? qrCode!.trim() : (ticketId ?? '').trim());
     return jsonEncode({
       'type': 'EVENTHUB_TICKET',
-      'ticket_id': ticketId,
-      'ticket_code': ticketCode,
-      'qr_code': qrCode,
-      'event_id': eventId,
-      'session_id': sessionId,
+      'ticket_code': ref,
     });
   }
+
+  String get qrPayload => buildQrPayload(
+        ticketCode: ticketCode,
+        qrCode: qrCode,
+        ticketId: ticketId,
+      );
 
   TicketModel copyWith({
     String? status,
     String? checkInStatus,
     String? checkInTime,
+    String? checkinMethod,
+    String? checkedInByName,
+    String? checkedInByEmail,
     String? attendeeName,
     String? attendeeEmail,
     String? attendeePhone,
@@ -305,10 +408,18 @@ class TicketModel {
       attendeeName: attendeeName ?? this.attendeeName,
       attendeeEmail: attendeeEmail ?? this.attendeeEmail,
       attendeePhone: attendeePhone ?? this.attendeePhone,
+      rawAttendeeName: rawAttendeeName,
+      rawAttendeeEmail: rawAttendeeEmail,
+      buyerName: buyerName,
+      buyerEmail: buyerEmail,
+      buyerPhone: buyerPhone,
       orderCode: orderCode,
       price: price,
       originalPrice: originalPrice,
       checkInTime: checkInTime ?? this.checkInTime,
+      checkinMethod: checkinMethod ?? this.checkinMethod,
+      checkedInByName: checkedInByName ?? this.checkedInByName,
+      checkedInByEmail: checkedInByEmail ?? this.checkedInByEmail,
       venue: venue,
       refundPolicy: refundPolicy,
     );

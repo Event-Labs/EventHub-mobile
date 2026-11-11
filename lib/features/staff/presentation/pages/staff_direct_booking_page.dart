@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/api/auth_service.dart';
 import '../../../../core/api/events_service.dart';
 import '../../../../core/api/staff_service.dart';
+import '../../../../core/models/ticket_model.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_background.dart';
 import '../../../home/presentation/pages/payment_page.dart';
@@ -844,7 +845,9 @@ class _StaffDirectBookingPageState extends State<StaffDirectBookingPage> {
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: QrImageView(
-                    data: firstTicketCode.toString(),
+                    data: tickets.isNotEmpty
+                        ? TicketModel.buildQrPayload(ticketCode: firstTicketCode.toString())
+                        : firstTicketCode.toString(),
                     version: QrVersions.auto,
                     size: 160,
                     backgroundColor: Colors.white,

@@ -10,9 +10,12 @@ import 'api_config.dart';
 class AuthService {
   static final AuthService _instance = AuthService._internal();
   factory AuthService() => _instance;
-  AuthService._internal();
+  AuthService._internal() {
+    _ensureSessionCallbacks();
+  }
 
   static const String _keyAuthToken = 'auth_token';
+  static const String _keyRefreshToken = 'refresh_token';
   static const String _keyUserData = 'user_data';
 
   UserModel? _currentUser;
@@ -21,40 +24,122 @@ class AuthService {
   bool get isLoggedIn => _currentUser != null;
   void setDemoUser({required bool isStaff}) {}
 
+  void _ensureSessionCallbacks() {
+    ApiClient().setSessionCallbacks(
+      onTokensUpdated: (accessToken, refreshToken) async {
+        await _persistTokens(accessToken, refreshToken);
+        if (_currentUser != null && accessToken != null) {
+          _currentUser = UserModel.fromJson(_currentUser!.toJson(), accessToken);
+          await _saveSession(_currentUser!, accessToken, refreshToken: refreshToken);
+        }
+      },
+      onAuthExpired: () async {
+        _currentUser = null;
+        await _clearSession();
+      },
+    );
+  }
+
+  Future<void> _persistTokens(String? accessToken, String? refreshToken) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (accessToken != null && accessToken.isNotEmpty) {
+        await prefs.setString(_keyAuthToken, accessToken);
+      }
+      if (refreshToken != null && refreshToken.isNotEmpty) {
+        await prefs.setString(_keyRefreshToken, refreshToken);
+      }
+    } catch (e) {
+      debugPrint('Error persisting tokens: $e');
+    }
+  }
+
   /// Restores saved login session on app startup
   Future<UserModel?> restoreSession() async {
+    _ensureSessionCallbacks();
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString(_keyAuthToken);
+      final refreshToken = prefs.getString(_keyRefreshToken);
       final userJson = prefs.getString(_keyUserData);
 
       if (token != null && token.isNotEmpty) {
-        ApiClient().setAuthToken(token);
+        ApiClient().setAuthTokens(accessToken: token, refreshToken: refreshToken);
+
+        UserModel? cachedUser;
         if (userJson != null && userJson.isNotEmpty) {
           try {
             final Map<String, dynamic> data = jsonDecode(userJson);
-            _currentUser = UserModel.fromJson(data, token);
+            cachedUser = UserModel.fromJson(data, token);
           } catch (e) {
             debugPrint('Failed to parse cached user json: $e');
           }
         }
 
-        // Validate token with server in background
-        try {
-          final res = await fetchProfile().timeout(const Duration(seconds: 4));
-          if (res['success'] == true && res['user'] is UserModel) {
-            _currentUser = res['user'] as UserModel;
-            await _saveSession(_currentUser!, token);
-            return _currentUser;
-          } else if (res['message']?.toString().contains('401') == true ||
-              res['message']?.toString().toLowerCase().contains('unauthorized') == true) {
+        // If the saved JWT is already expired, refresh immediately or clear session
+        if (ApiClient.isJwtExpired(token)) {
+          if (refreshToken != null && refreshToken.isNotEmpty) {
+            final refreshed = await ApiClient().refreshAccessToken();
+            if (!refreshed) {
+              await logout();
+              return null;
+            }
+          } else {
+            debugPrint('[AuthService] Stored JWT expired without refresh_token; clearing session.');
             await logout();
             return null;
           }
-        } catch (_) {
-          // If network offline or timed out, keep current session
         }
-        return _currentUser;
+
+        // Validate token and load fresh roles from server
+        try {
+          final res = await fetchProfile().timeout(const Duration(seconds: 5));
+          if (res['success'] == true && res['user'] is UserModel) {
+            var user = res['user'] as UserModel;
+            final currentToken = ApiClient().authToken ?? token;
+            final jwtRoles = UserModel.extractRolesFromJwt(currentToken);
+            final dbNeedsStaffJwt = user.canAccessStaff && !jwtRoles.contains('STAFF');
+
+            // Refresh JWT if DB roles changed (e.g. invited as Staff after login)
+            if (dbNeedsStaffJwt && (ApiClient().refreshToken?.isNotEmpty ?? false)) {
+              final refreshed = await ApiClient().refreshAccessToken();
+              if (refreshed && ApiClient().authToken != null) {
+                user = UserModel.fromJson(user.toJson(), ApiClient().authToken);
+              }
+            }
+
+            _currentUser = user;
+            await _saveSession(
+              user,
+              ApiClient().authToken ?? token,
+              refreshToken: ApiClient().refreshToken,
+            );
+            return _currentUser;
+          }
+
+          final statusCode = res['statusCode'];
+          final errorCode = res['errorCode']?.toString() ?? '';
+          final msg = res['message']?.toString().toLowerCase() ?? '';
+          if (statusCode == 401 ||
+              errorCode.startsWith('AUTH_') ||
+              msg.contains('401') ||
+              msg.contains('unauthorized')) {
+            await logout();
+            return null;
+          }
+        } catch (e) {
+          debugPrint('[AuthService] restoreSession fetchProfile warning: $e');
+        }
+
+        // Offline / timeout fallback only if JWT is still valid locally
+        final activeToken = ApiClient().authToken;
+        if (activeToken != null && !ApiClient.isJwtExpired(activeToken) && cachedUser != null) {
+          _currentUser = cachedUser;
+          return _currentUser;
+        }
+
+        await logout();
+        return null;
       }
     } catch (e) {
       debugPrint('Error restoring session: $e');
@@ -62,10 +147,18 @@ class AuthService {
     return null;
   }
 
-  Future<void> _saveSession(UserModel user, String token) async {
+  Future<void> _saveSession(
+    UserModel user,
+    String token, {
+    String? refreshToken,
+  }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_keyAuthToken, token);
+      final effectiveRefresh = refreshToken ?? ApiClient().refreshToken;
+      if (effectiveRefresh != null && effectiveRefresh.isNotEmpty) {
+        await prefs.setString(_keyRefreshToken, effectiveRefresh);
+      }
       await prefs.setString(_keyUserData, jsonEncode(user.toJson()));
     } catch (e) {
       debugPrint('Error saving session: $e');
@@ -76,6 +169,7 @@ class AuthService {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_keyAuthToken);
+      await prefs.remove(_keyRefreshToken);
       await prefs.remove(_keyUserData);
     } catch (e) {
       debugPrint('Error clearing session: $e');
@@ -86,6 +180,7 @@ class AuthService {
     required String email,
     required String password,
   }) async {
+    _ensureSessionCallbacks();
     final response = await ApiClient().post(ApiConfig.login, {
       'email': email,
       'password': password,
@@ -93,6 +188,13 @@ class AuthService {
 
     if (response['success'] == true && response['data'] != null) {
       final data = response['data'];
+      if (data is Map && data['requiresTwoFactor'] == true) {
+        return {
+          'success': false,
+          'requiresTwoFactor': true,
+          'message': 'Tài khoản yêu cầu xác thực OTP hai bước khi đăng nhập.',
+        };
+      }
       final token = data['accessToken']?.toString();
       if (token != null) {
         ApiClient().setAuthToken(token);
@@ -100,7 +202,11 @@ class AuthService {
       if (data['user'] != null) {
         _currentUser = UserModel.fromJson(data['user'], token);
         if (token != null && _currentUser != null) {
-          await _saveSession(_currentUser!, token);
+          await _saveSession(
+            _currentUser!,
+            token,
+            refreshToken: ApiClient().refreshToken,
+          );
         }
       }
       return {'success': true, 'user': _currentUser, 'message': response['message'] ?? 'Đăng nhập thành công'};
@@ -110,6 +216,7 @@ class AuthService {
   }
 
   Future<Map<String, dynamic>> loginWithGoogle() async {
+    _ensureSessionCallbacks();
     try {
       final GoogleSignIn googleSignIn = GoogleSignIn(
         serverClientId: ApiConfig.googleServerClientId,
@@ -142,6 +249,13 @@ class AuthService {
 
       if (response['success'] == true && response['data'] != null) {
         final data = response['data'];
+        if (data is Map && data['requiresTwoFactor'] == true) {
+          return {
+            'success': false,
+            'requiresTwoFactor': true,
+            'message': 'Tài khoản yêu cầu xác thực OTP hai bước khi đăng nhập.',
+          };
+        }
         final token = data['accessToken']?.toString();
         if (token != null) {
           ApiClient().setAuthToken(token);
@@ -149,7 +263,11 @@ class AuthService {
         if (data['user'] != null) {
           _currentUser = UserModel.fromJson(data['user'], token);
           if (token != null && _currentUser != null) {
-            await _saveSession(_currentUser!, token);
+            await _saveSession(
+              _currentUser!,
+              token,
+              refreshToken: ApiClient().refreshToken,
+            );
           }
         }
         return {
@@ -253,12 +371,18 @@ class AuthService {
       _currentUser = UserModel.fromJson(response['data'], ApiClient().authToken);
       final token = ApiClient().authToken;
       if (token != null && _currentUser != null) {
-        await _saveSession(_currentUser!, token);
+        await _saveSession(
+          _currentUser!,
+          token,
+          refreshToken: ApiClient().refreshToken,
+        );
       }
       return {'success': true, 'user': _currentUser};
     }
     return {
       'success': false,
+      'statusCode': response['statusCode'],
+      'errorCode': response['errorCode'],
       'message': response['message'] ?? 'Không thể tải thông tin trang cá nhân'
     };
   }
@@ -424,8 +548,13 @@ class AuthService {
   }
 
   Future<void> logout() async {
+    try {
+      if (ApiClient().refreshToken != null) {
+        await ApiClient().post('/auth/logout', {}).timeout(const Duration(seconds: 3));
+      }
+    } catch (_) {}
     _currentUser = null;
-    ApiClient().setAuthToken(null);
+    ApiClient().clearSession();
     await _clearSession();
     try {
       final GoogleSignIn googleSignIn = GoogleSignIn(
