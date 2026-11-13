@@ -220,8 +220,15 @@ class EventModel {
   final String? policyFileUrl;
   final String? policyFileName;
   final int? policyFileSize;
+  final Map<String, dynamic>? waitingRoomConfig;
   final bool? _requireAttendeeInfo;
   bool get requireAttendeeInfo => _requireAttendeeInfo == true;
+
+  bool get isWaitingRoomEnabled {
+    if (waitingRoomConfig == null) return false;
+    final enabled = waitingRoomConfig!['enabled'];
+    return enabled == true || enabled == 'true' || enabled == 1;
+  }
 
   bool get allowRefunds {
     if (refundPolicyData != null) {
@@ -321,6 +328,7 @@ class EventModel {
     this.policyFileUrl,
     this.policyFileName,
     this.policyFileSize,
+    this.waitingRoomConfig,
     bool? requireAttendeeInfo,
   }) : _requireAttendeeInfo = requireAttendeeInfo ?? false;
 
@@ -451,6 +459,9 @@ class EventModel {
       policyFileUrl: policyUrl,
       policyFileName: policyName,
       policyFileSize: policySize,
+      waitingRoomConfig: json['waiting_room_config'] is Map
+          ? Map<String, dynamic>.from(json['waiting_room_config'] as Map)
+          : null,
       requireAttendeeInfo: json['require_attendee_info'] == true,
     );
   }
@@ -458,6 +469,7 @@ class EventModel {
   EventModel copyWith({
     bool? isFavorited,
     bool? requireAttendeeInfo,
+    Map<String, dynamic>? waitingRoomConfig,
   }) {
     return EventModel(
       id: id,
@@ -482,6 +494,7 @@ class EventModel {
       isLive: isLive,
       refundPolicy: refundPolicy,
       additionalTerms: additionalTerms,
+      waitingRoomConfig: waitingRoomConfig ?? this.waitingRoomConfig,
       requireAttendeeInfo: requireAttendeeInfo ?? this.requireAttendeeInfo,
     );
   }

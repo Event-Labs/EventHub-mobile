@@ -12,6 +12,7 @@ class ApiClient {
   http.Client _httpClient = http.Client();
   String? _token;
   String? _refreshToken;
+  String? _bookingToken;
   Future<bool>? _refreshFuture;
   void Function(String? accessToken, String? refreshToken)? _onTokensUpdated;
   Future<void> Function()? _onAuthExpired;
@@ -22,6 +23,7 @@ class ApiClient {
 
   String? get authToken => _token;
   String? get refreshToken => _refreshToken;
+  String? get bookingToken => _bookingToken;
 
   void setToken(String? token) {
     _token = token;
@@ -29,6 +31,14 @@ class ApiClient {
 
   void setAuthToken(String? token) {
     _token = token;
+  }
+
+  void setBookingToken(String? token) {
+    _bookingToken = (token != null && token.trim().isNotEmpty) ? token.trim() : null;
+  }
+
+  void clearBookingToken() {
+    _bookingToken = null;
   }
 
   void setRefreshToken(String? refreshToken) {
@@ -53,6 +63,7 @@ class ApiClient {
   void clearSession() {
     _token = null;
     _refreshToken = null;
+    _bookingToken = null;
   }
 
   void setSessionCallbacks({
@@ -73,6 +84,7 @@ class ApiClient {
     _httpClient = http.Client();
     _token = null;
     _refreshToken = null;
+    _bookingToken = null;
     _refreshFuture = null;
     _onTokensUpdated = null;
     _onAuthExpired = null;
@@ -156,7 +168,11 @@ class ApiClient {
         normalized == '/auth/verify-email';
   }
 
-  Map<String, String> _buildHeaders({bool includeAuth = true, bool includeRefreshCookie = false}) {
+  Map<String, String> _buildHeaders({
+    bool includeAuth = true,
+    bool includeRefreshCookie = false,
+    Map<String, String>? extraHeaders,
+  }) {
     final headers = <String, String>{
       'Content-Type': 'application/json',
       'Accept': 'application/json',
@@ -166,6 +182,12 @@ class ApiClient {
     }
     if (includeRefreshCookie && _refreshToken != null && _refreshToken!.isNotEmpty) {
       headers['Cookie'] = 'refresh_token=$_refreshToken';
+    }
+    if (_bookingToken != null && _bookingToken!.isNotEmpty) {
+      headers['x-booking-token'] = _bookingToken!;
+    }
+    if (extraHeaders != null && extraHeaders.isNotEmpty) {
+      headers.addAll(extraHeaders);
     }
     return headers;
   }
@@ -311,6 +333,7 @@ class ApiClient {
     String path, {
     Map<String, String>? queryParams,
     Map<String, dynamic>? body,
+    Map<String, String>? headers,
     bool retryOnUnauthorized = true,
   }) async {
     final isAuthEndpoint = _isAuthNoRefreshPath(path);
@@ -334,7 +357,11 @@ class ApiClient {
       http.Response response = await _dispatchHttp(
         method,
         uri,
-        _buildHeaders(includeAuth: true, includeRefreshCookie: includeCookie),
+        _buildHeaders(
+          includeAuth: true,
+          includeRefreshCookie: includeCookie,
+          extraHeaders: headers,
+        ),
         body,
       );
 
@@ -344,7 +371,11 @@ class ApiClient {
           response = await _dispatchHttp(
             method,
             uri,
-            _buildHeaders(includeAuth: true, includeRefreshCookie: includeCookie),
+            _buildHeaders(
+              includeAuth: true,
+              includeRefreshCookie: includeCookie,
+              extraHeaders: headers,
+            ),
             body,
           );
         } else if (_onAuthExpired != null) {
@@ -372,20 +403,20 @@ class ApiClient {
     }
   }
 
-  Future<dynamic> get(String path, {Map<String, String>? queryParams}) =>
-      _sendRequest('GET', path, queryParams: queryParams);
+  Future<dynamic> get(String path, {Map<String, String>? queryParams, Map<String, String>? headers}) =>
+      _sendRequest('GET', path, queryParams: queryParams, headers: headers);
 
-  Future<dynamic> post(String path, Map<String, dynamic> body) =>
-      _sendRequest('POST', path, body: body);
+  Future<dynamic> post(String path, Map<String, dynamic> body, {Map<String, String>? headers}) =>
+      _sendRequest('POST', path, body: body, headers: headers);
 
-  Future<dynamic> patch(String path, Map<String, dynamic> body) =>
-      _sendRequest('PATCH', path, body: body);
+  Future<dynamic> patch(String path, Map<String, dynamic> body, {Map<String, String>? headers}) =>
+      _sendRequest('PATCH', path, body: body, headers: headers);
 
-  Future<dynamic> put(String path, Map<String, dynamic> body) =>
-      _sendRequest('PUT', path, body: body);
+  Future<dynamic> put(String path, Map<String, dynamic> body, {Map<String, String>? headers}) =>
+      _sendRequest('PUT', path, body: body, headers: headers);
 
-  Future<dynamic> delete(String path, {Map<String, dynamic>? body}) =>
-      _sendRequest('DELETE', path, body: body);
+  Future<dynamic> delete(String path, {Map<String, dynamic>? body, Map<String, String>? headers}) =>
+      _sendRequest('DELETE', path, body: body, headers: headers);
 
   dynamic _processResponse(
     http.Response response, {

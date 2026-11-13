@@ -51,22 +51,34 @@ class OrdersService {
     required String buyerEmail,
     String? buyerPhone,
     String? promoCode,
+    String? bookingToken,
     bool eventTermsAccepted = true,
     List<OrderAttendeeInput> attendees = const [],
     required List<OrderItemInput> items,
   }) async {
+    final effectiveToken = bookingToken ?? ApiClient().bookingToken;
     final payload = {
       'event_id': eventId,
       'buyer_name': buyerName,
       'buyer_email': buyerEmail,
       if (buyerPhone != null && buyerPhone.isNotEmpty) 'buyer_phone': buyerPhone,
       if (promoCode != null && promoCode.isNotEmpty) 'promo_code': promoCode,
+      if (effectiveToken != null && effectiveToken.isNotEmpty) 'booking_token': effectiveToken,
       'event_terms_accepted': eventTermsAccepted,
       'attendees': attendees.map((a) => a.toJson()).toList(),
       'items': items.map((i) => i.toJson()).toList(),
     };
 
-    final response = await ApiClient().post(ApiConfig.checkout, payload);
+    final headers = <String, String>{};
+    if (effectiveToken != null && effectiveToken.isNotEmpty) {
+      headers['x-booking-token'] = effectiveToken;
+    }
+
+    final response = await ApiClient().post(
+      ApiConfig.checkout,
+      payload,
+      headers: headers.isNotEmpty ? headers : null,
+    );
     if (response['success'] == true && response['data'] != null) {
       return {
         'success': true,

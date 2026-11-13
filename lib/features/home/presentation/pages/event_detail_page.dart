@@ -6,6 +6,8 @@ import '../../../../core/models/event_model.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_background.dart';
 import 'ticket_booking_page.dart';
+import 'waiting_room_page.dart';
+import '../../../../core/api/waiting_room_service.dart';
 
 class EventDetailPage extends StatefulWidget {
   final EventModel? event;
@@ -202,7 +204,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
     } catch (_) {}
   }
 
-  void _proceedToBooking(EventModel event) {
+  Future<void> _proceedToBooking(EventModel event) async {
     if (_isEventExpired(event)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -220,6 +222,41 @@ class _EventDetailPageState extends State<EventDetailPage> {
     }
 
     final user = AuthService().currentUser;
+
+    if (event.isWaitingRoomEnabled) {
+      final activeToken = await WaitingRoomService().getSavedBookingToken(event.id);
+      if (activeToken != null && activeToken.isNotEmpty) {
+        if (!mounted) return;
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => TicketBookingPage(
+              event: event,
+              initialSessionId: sessionId,
+              initialBuyerName: user?.fullName,
+              initialBuyerEmail: user?.email,
+              initialBuyerPhone: user?.phone,
+              bookingToken: activeToken,
+            ),
+          ),
+        );
+        return;
+      }
+
+      if (!mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => WaitingRoomPage(
+            event: event,
+            selectedSessionId: sessionId,
+          ),
+        ),
+      );
+      return;
+    }
+
+    if (!mounted) return;
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -281,12 +318,12 @@ class _EventDetailPageState extends State<EventDetailPage> {
                     children: [
                       const SizedBox(height: 16),
 
-                      // 2. Bento Card: Lịch Diễn & Các Suất Diễn (Core booking section)
-                      _buildSessionsSection(event),
+                      // 2. Bento Card: Tổng Quan Sự Kiện
+                      _buildOverviewSection(event),
                       const SizedBox(height: 20),
 
-                      // 3. Bento Card: Tổng Quan Sự Kiện
-                      _buildOverviewSection(event),
+                      // 3. Bento Card: Lịch Diễn & Các Suất Diễn (Core booking section)
+                      _buildSessionsSection(event),
                       const SizedBox(height: 20),
 
                       // 4. Bento Card: Địa Điểm Tổ Chức
@@ -517,7 +554,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
                       width: 4,
                       height: 16,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF06B6D4),
+                        color: Colors.white,
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -525,7 +562,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
                     const Text(
                       'Lịch diễn & Hạng vé',
                       style: TextStyle(
-                        color: Color(0xFF06B6D4),
+                        color: Colors.white,
                         fontSize: 17,
                         fontWeight: FontWeight.bold,
                         letterSpacing: -0.2,
@@ -796,7 +833,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
         children: [
           const Row(
             children: [
-              Icon(Icons.notes, color: Color(0xFFE6C17A), size: 20),
+              Icon(Icons.notes, color: Colors.white, size: 20),
               SizedBox(width: 8),
               Text(
                 'Tổng quan sự kiện',
@@ -865,7 +902,7 @@ class _EventDetailPageState extends State<EventDetailPage> {
         children: [
           const Row(
             children: [
-              Icon(Icons.location_on_outlined, color: Color(0xFF06B6D4), size: 20),
+              Icon(Icons.location_on_outlined, color: Colors.white, size: 20),
               SizedBox(width: 8),
               Text(
                 'Địa điểm tổ chức',

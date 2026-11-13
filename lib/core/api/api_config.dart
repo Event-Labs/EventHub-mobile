@@ -6,13 +6,37 @@ class ApiConfig {
   // Environment overrides via --dart-define if explicitly provided
   static const String _envBaseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: '');
   static const String _envHost = String.fromEnvironment('API_HOST', defaultValue: '');
+  static String? _customBaseUrl;
+
+  /// Dynamically set custom base URL (e.g. for local testing with web backend)
+  static void setCustomBaseUrl(String? url) {
+    if (url == null || url.trim().isEmpty) {
+      _customBaseUrl = null;
+      return;
+    }
+    var normalized = url.trim();
+    while (normalized.endsWith('/')) {
+      normalized = normalized.substring(0, normalized.length - 1);
+    }
+    if (!normalized.endsWith('/api')) {
+      normalized = '$normalized/api';
+    }
+    _customBaseUrl = normalized;
+  }
 
   static String get apiHost {
+    if (_customBaseUrl != null && _customBaseUrl!.isNotEmpty) {
+      final uri = Uri.tryParse(_customBaseUrl!);
+      if (uri != null && uri.host.isNotEmpty) return uri.host;
+    }
     if (_envHost.trim().isNotEmpty) return _envHost.trim();
     return defaultHost;
   }
 
   static String get baseUrl {
+    if (_customBaseUrl != null && _customBaseUrl!.isNotEmpty) {
+      return _customBaseUrl!;
+    }
     if (_envBaseUrl.trim().isNotEmpty) {
       var normalized = _envBaseUrl.trim();
       while (normalized.endsWith('/')) {
@@ -51,6 +75,13 @@ class ApiConfig {
   static const String organizers = '/events/organizers';
   static const String favoriteEvents = '/events/favorites/me';
   static String toggleFavorite(String eventId) => '/events/$eventId/favorite/toggle';
+
+  // Virtual Waiting Room (Phòng chờ ảo)
+  static String queueJoin(String eventId) => '/events/$eventId/queue/join';
+  static String queueStatus(String eventId) => '/events/$eventId/queue/status';
+  static String queueLeave(String eventId) => '/events/$eventId/queue/leave';
+  static String queueAdmission(String eventId) => '/events/$eventId/queue/admission';
+  static String queueStream(String eventId) => '/events/$eventId/queue/stream';
 
   // Orders & Booking (PayOS)
   static const String orders = '/orders';
