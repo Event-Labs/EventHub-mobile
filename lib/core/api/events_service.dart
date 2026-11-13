@@ -148,8 +148,21 @@ class EventsService {
     return {};
   }
 
-  Future<Map<String, dynamic>> holdSeats(Map<String, dynamic> payload) async {
-    final response = await ApiClient().post('/events/seats/hold', payload);
+  Future<Map<String, dynamic>> holdSeats(Map<String, dynamic> payload, {String? bookingToken}) async {
+    final headers = <String, String>{};
+    if (bookingToken != null && bookingToken.isNotEmpty) {
+      headers['x-booking-token'] = bookingToken;
+    }
+    final response = await ApiClient().post(
+      '/events/availability/hold',
+      payload,
+      headers: headers.isNotEmpty ? headers : null,
+    );
+    return response;
+  }
+
+  Future<Map<String, dynamic>> releaseSeatHolds(Map<String, dynamic> payload) async {
+    final response = await ApiClient().post('/events/availability/release', payload);
     return response;
   }
 }

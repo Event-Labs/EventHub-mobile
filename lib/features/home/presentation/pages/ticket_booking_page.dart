@@ -10,8 +10,10 @@ import '../../../../core/models/event_model.dart';
 import '../../../../core/models/user_model.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_background.dart';
+import '../../../../core/api/waiting_room_service.dart';
 import 'payment_page.dart';
 import 'payment_success_page.dart';
+import 'waiting_room_page.dart';
 
 class TicketBookingPage extends StatefulWidget {
   final EventModel event;
@@ -21,6 +23,7 @@ class TicketBookingPage extends StatefulWidget {
   final String? initialBuyerName;
   final String? initialBuyerEmail;
   final String? initialBuyerPhone;
+  final String? bookingToken;
 
   const TicketBookingPage({
     super.key,
@@ -31,6 +34,7 @@ class TicketBookingPage extends StatefulWidget {
     this.initialBuyerName,
     this.initialBuyerEmail,
     this.initialBuyerPhone,
+    this.bookingToken,
   });
 
   @override
@@ -173,10 +177,13 @@ class _TicketBookingPageState extends State<TicketBookingPage> {
   double _promoDiscountAmount = 0.0;
   bool _termsAccepted = false;
   bool _isCheckingOut = false;
+  String? _bookingToken;
 
   @override
   void initState() {
     super.initState();
+    _bookingToken = widget.bookingToken;
+    _syncBookingToken();
 
     // 1. Resolve selected session
     if (widget.initialSessionId != null &&
@@ -218,6 +225,15 @@ class _TicketBookingPageState extends State<TicketBookingPage> {
     // 6. Load session seats if session selected
     if (_selectedSession != null) {
       _loadSessionSeats(_selectedSession!.id);
+    }
+  }
+
+  Future<void> _syncBookingToken() async {
+    if (_bookingToken == null || _bookingToken!.isEmpty) {
+      final saved = await WaitingRoomService().getSavedBookingToken(widget.event.id);
+      if (saved != null && mounted) {
+        setState(() => _bookingToken = saved);
+      }
     }
   }
 
@@ -752,7 +768,7 @@ class _TicketBookingPageState extends State<TicketBookingPage> {
           'event_id': widget.event.id,
           'items': _buildOrderItems().map((i) => i.toJson()).toList(),
         };
-        final res = await EventsService().holdSeats(payload);
+        final res = await EventsService().holdSeats(payload, bookingToken: _bookingToken);
         if (res['data']?['hold_expires_at'] != null) {
           final parsed = DateTime.tryParse(res['data']['hold_expires_at'].toString())?.toLocal();
           if (parsed != null) {
@@ -1009,6 +1025,7 @@ class _TicketBookingPageState extends State<TicketBookingPage> {
       buyerEmail: buyerEmail,
       buyerPhone: buyerPhone.isNotEmpty ? buyerPhone : null,
       promoCode: _appliedPromoCode,
+      bookingToken: _bookingToken,
       eventTermsAccepted: _termsAccepted,
       attendees: attendees,
       items: items,
@@ -1018,6 +1035,11 @@ class _TicketBookingPageState extends State<TicketBookingPage> {
 
     if (mounted) {
       if (result['success'] == true && result['data'] != null) {
+        // Clear waiting room session and token once order checkout is complete
+        WaitingRoomService().clearSavedSession(widget.event.id);
+        WaitingRoomService().clearBookingToken(widget.event.id);
+        _bookingToken = null;
+
         final orderData = result['data'];
         final orderId = orderData['order']?['id']?.toString() ?? '';
         final orderTotal = (orderData['order']?['total_amount'] as num?)?.toDouble() ??
@@ -1056,6 +1078,29 @@ class _TicketBookingPageState extends State<TicketBookingPage> {
           );
         }
       } else {
+        final errCode = result['errorCode']?.toString();
+        if (errCode == 'WAITING_ROOM_TOKEN_REQUIRED' || errCode == 'WAITING_ROOM_TOKEN_EXPIRED') {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result['message'] ?? 'Phiên phòng chờ đã hết hạn. Vui lòng xếp hàng lại.'),
+              backgroundColor: AppColors.error,
+              action: SnackBarAction(
+                label: 'Vào phòng chờ',
+                textColor: Colors.white,
+                onPressed: () {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => WaitingRoomPage(event: widget.event),
+                    ),
+                  );
+                },
+              ),
+            ),
+          );
+          return;
+        }
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(result['message'] ?? 'Không thể tạo đơn hàng. Vui lòng thử lại.'),
@@ -1070,32 +1115,61 @@ class _TicketBookingPageState extends State<TicketBookingPage> {
     final m = (_countdownSeconds ~/ 60).toString().padLeft(2, '0');
     final s = (_countdownSeconds % 60).toString().padLeft(2, '0');
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 16),
-      color: const Color(0xFFDC2626), // red banner matching Image 3
-      child: Center(
-        child: RichText(
-          text: TextSpan(
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (_bookingToken != null && _bookingToken!.isNotEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 16),
+            decoration: BoxDecoration(
+              color: AppColors.gold.withOpacity(0.18),
+              border: Border(bottom: BorderSide(color: AppColors.gold.withOpacity(0.3))),
             ),
-            children: [
-              const TextSpan(text: 'Hoàn tất đặt vé trong   '),
-              TextSpan(
-                text: '$m : $s',
-                style: const TextStyle(
-                  fontWeight: FontWeight.w900,
-                  fontSize: 15,
-                  letterSpacing: 0.5,
+            child: const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.verified_user_outlined, size: 13, color: AppColors.goldLight),
+                SizedBox(width: 6),
+                Text(
+                  'Đã cấp quyền phòng chờ ảo • Phiên mua vé an toàn',
+                  style: TextStyle(
+                    color: AppColors.goldLight,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
+              ],
+            ),
+          ),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 16),
+          color: const Color(0xFFDC2626), // red banner matching Image 3
+          child: Center(
+            child: RichText(
+              text: TextSpan(
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+                children: [
+                  const TextSpan(text: 'Hoàn tất đặt vé trong   '),
+                  TextSpan(
+                    text: '$m : $s',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 15,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
-      ),
+      ],
     );
   }
 
