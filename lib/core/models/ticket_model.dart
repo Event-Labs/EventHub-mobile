@@ -315,7 +315,7 @@ class TicketModel {
 
   Color get statusColor {
     if (isValid) return const Color(0xFF22C55E); // Emerald green
-    if (isUsed) return const Color(0xFF06B6D4); // Cyan
+    if (isUsed) return const Color(0xFFEF4444); // Red (ticket already used)
     if (isRefundPending) return const Color(0xFFF59E0B); // Amber
     if (isRefunded) return const Color(0xFFA855F7); // Purple
     if (isExpired) return const Color(0xFFF43F5E); // Rose

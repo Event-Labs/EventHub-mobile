@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../../../core/api/auth_service.dart';
 import '../../../../core/api/staff_service.dart';
@@ -160,6 +161,12 @@ class _QrScannerPageState extends State<QrScannerPage> with SingleTickerProvider
           verifyRes['ticket'] is TicketModel ? (verifyRes['ticket'] as TicketModel) : null;
 
       if (verifyRes['success'] == true && ticket != null) {
+        final isAlreadyUsed = ticket.isUsed;
+        if (isAlreadyUsed) {
+          HapticFeedback.heavyImpact();
+        } else {
+          HapticFeedback.lightImpact();
+        }
         setState(() {
           _isProcessing = false;
           _activeVerifyResult = verifyRes;
@@ -169,8 +176,13 @@ class _QrScannerPageState extends State<QrScannerPage> with SingleTickerProvider
           _justCheckedIn = false;
           _checkInError = null;
           _lastScanResult = {
-            'success': true,
-            'message': 'Đã tìm thấy vé ${ticket.ticketCode}',
+            'success': !isAlreadyUsed,
+            'isUsed': isAlreadyUsed,
+            'message': isAlreadyUsed
+                ? (ticket.formattedCheckInTime.isNotEmpty
+                    ? 'CẢNH BÁO: Vé đã được dùng lúc ${ticket.formattedCheckInTime}!'
+                    : 'CẢNH BÁO: Vé đã được sử dụng trước đó!')
+                : 'Đã tìm thấy vé ${ticket.ticketCode}',
           };
         });
       } else {
@@ -693,20 +705,26 @@ class _QrScannerPageState extends State<QrScannerPage> with SingleTickerProvider
     final code = _currentProcessingCode ?? '';
     final verifyResult = _activeVerifyResult ?? {};
     final bool isVerified = verifyResult['success'] == true && current != null;
+    final bool isAlreadyUsedBefore = current != null && current.isUsed && !_justCheckedIn;
     final bool isAlreadyCheckedIn = current != null && (current.isUsed || _justCheckedIn);
     final bool canCheckIn = current != null && current.isValid && !isAlreadyCheckedIn;
 
-    final Color primaryColor = isAlreadyCheckedIn
-        ? (_justCheckedIn ? const Color(0xFF22C55E) : const Color(0xFF06B6D4))
-        : (canCheckIn
-            ? const Color(0xFF22C55E)
-            : (isVerified ? const Color(0xFFF59E0B) : AppColors.error));
+    // Khi vé đã được dùng rồi: BÁO ĐỎ RỰC RỠ thay vì xanh dương để staff nhận biết ngay lập tức
+    final Color primaryColor = _justCheckedIn
+        ? const Color(0xFF22C55E) // Xanh lá: Vừa check-in thành công
+        : (isAlreadyUsedBefore
+            ? const Color(0xFFEF4444) // ĐỎ: Cảnh báo vé đã dùng!
+            : (canCheckIn
+                ? const Color(0xFF22C55E) // Xanh lá: Vé hợp lệ sẵn sàng check-in
+                : (isVerified ? const Color(0xFFF59E0B) : const Color(0xFFEF4444))));
 
-    final Color bgColor = isAlreadyCheckedIn
-        ? (_justCheckedIn ? const Color(0xFF072118) : const Color(0xFF071F2C))
-        : (canCheckIn
-            ? const Color(0xFF072118)
-            : const Color(0xFF260D12));
+    final Color bgColor = _justCheckedIn
+        ? const Color(0xFF072118) // Nền xanh lá đậm
+        : (isAlreadyUsedBefore
+            ? const Color(0xFF260D12) // Nền ĐỎ ĐẬM cảnh báo vé đã dùng
+            : (canCheckIn
+                ? const Color(0xFF072118)
+                : const Color(0xFF260D12)));
 
     final maxHeight = MediaQuery.of(context).size.height * 0.88;
 
@@ -717,12 +735,12 @@ class _QrScannerPageState extends State<QrScannerPage> with SingleTickerProvider
         color: bgColor,
         borderRadius: BorderRadius.circular(22),
         border: Border.all(
-          color: primaryColor.withValues(alpha: 0.6),
-          width: 2,
+          color: primaryColor.withValues(alpha: isAlreadyUsedBefore ? 0.9 : 0.6),
+          width: isAlreadyUsedBefore ? 2.5 : 2,
         ),
         boxShadow: [
           BoxShadow(
-            color: primaryColor.withValues(alpha: 0.25),
+            color: primaryColor.withValues(alpha: isAlreadyUsedBefore ? 0.4 : 0.25),
             blurRadius: 20,
             spreadRadius: 2,
           ),
@@ -755,11 +773,13 @@ class _QrScannerPageState extends State<QrScannerPage> with SingleTickerProvider
                       border: Border.all(color: primaryColor, width: 1.5),
                     ),
                     child: Icon(
-                      isAlreadyCheckedIn
-                          ? (_justCheckedIn ? Icons.check_circle_rounded : Icons.verified_user_rounded)
-                          : (canCheckIn
-                              ? Icons.confirmation_number_outlined
-                              : (isVerified ? Icons.warning_amber_rounded : Icons.cancel_rounded)),
+                      _justCheckedIn
+                          ? Icons.check_circle_rounded
+                          : (isAlreadyUsedBefore
+                              ? Icons.cancel_rounded
+                              : (canCheckIn
+                                  ? Icons.confirmation_number_outlined
+                                  : (isVerified ? Icons.warning_amber_rounded : Icons.cancel_rounded))),
                       color: primaryColor,
                       size: 20,
                     ),
@@ -770,11 +790,13 @@ class _QrScannerPageState extends State<QrScannerPage> with SingleTickerProvider
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          isAlreadyCheckedIn
-                              ? (_justCheckedIn ? 'CHECK-IN THÀNH CÔNG!' : 'VÉ ĐÃ ĐƯỢC CHECK-IN!')
-                              : (canCheckIn
-                                  ? 'THÔNG TIN VÉ HỢP LỆ'
-                                  : (isVerified ? 'VÉ KHÔNG THỂ CHECK-IN' : 'XÁC THỰC THẤT BẠI!')),
+                          _justCheckedIn
+                              ? 'CHECK-IN THÀNH CÔNG!'
+                              : (isAlreadyUsedBefore
+                                  ? 'CẢNH BÁO: VÉ ĐÃ ĐƯỢC DÙNG!'
+                                  : (canCheckIn
+                                      ? 'THÔNG TIN VÉ HỢP LỆ'
+                                      : (isVerified ? 'VÉ KHÔNG THỂ CHECK-IN' : 'XÁC THỰC THẤT BẠI!'))),
                           style: TextStyle(
                             color: primaryColor,
                             fontSize: 14,
@@ -783,16 +805,22 @@ class _QrScannerPageState extends State<QrScannerPage> with SingleTickerProvider
                           ),
                         ),
                         Text(
-                          isAlreadyCheckedIn
-                              ? (_justCheckedIn
-                                  ? 'Đã vào cổng thành công'
-                                  : 'Vé đã check-in trước đó')
-                              : (canCheckIn
-                                  ? 'Nhấn nút bên dưới để xác nhận vào cổng'
-                                  : (verifyResult['message'] ?? (current != null ? current.formattedStatus : 'Vé không hợp lệ!'))),
-                          maxLines: 1,
+                          _justCheckedIn
+                              ? 'Đã vào cổng thành công'
+                              : (isAlreadyUsedBefore
+                                  ? (current.formattedCheckInTime.isNotEmpty
+                                      ? 'Đã soát vào lúc ${current.formattedCheckInTime} • Không thể soát lại!'
+                                      : 'Vé đã được check-in trước đó • Không thể soát lại!')
+                                  : (canCheckIn
+                                      ? 'Nhấn nút bên dưới để xác nhận vào cổng'
+                                      : (verifyResult['message'] ?? (current != null ? current.formattedStatus : 'Vé không hợp lệ!')))),
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(color: Colors.white70, fontSize: 11),
+                          style: TextStyle(
+                            color: isAlreadyUsedBefore ? const Color(0xFFFCA5A5) : Colors.white70,
+                            fontSize: 11,
+                            fontWeight: isAlreadyUsedBefore ? FontWeight.w600 : FontWeight.normal,
+                          ),
                         ),
                       ],
                     ),
@@ -806,6 +834,51 @@ class _QrScannerPageState extends State<QrScannerPage> with SingleTickerProvider
                   ),
                 ],
               ),
+
+              // Banner cảnh báo màu đỏ nổi bật khi vé đã dùng (giống Web StaffQrCheckInPage)
+              if (isAlreadyUsedBefore) ...[
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEF4444).withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.7)),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.cancel_rounded, color: Color(0xFFEF4444), size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'CẢNH BÁO: VÉ ĐÃ ĐƯỢC SỬ DỤNG!',
+                              style: TextStyle(
+                                color: Color(0xFFEF4444),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                                letterSpacing: 0.3,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Vé này đã được check-in vào lúc ${current.formattedCheckInTime.isNotEmpty ? current.formattedCheckInTime : "trước đó"}${current.checkedInByName != null ? " bởi ${current.checkedInByName}" : ""}. Không hợp lệ để vào cổng lại!',
+                              style: const TextStyle(
+                                color: Color(0xFFFCA5A5),
+                                fontSize: 11,
+                                height: 1.3,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               const SizedBox(height: 10),
 
               // 2. Structured Information Grid: fits fully without scrolling
@@ -907,9 +980,11 @@ class _QrScannerPageState extends State<QrScannerPage> with SingleTickerProvider
                               Row(
                                 children: [
                                   _buildStatusBadge(
-                                    isAlreadyCheckedIn
+                                    _justCheckedIn
                                         ? 'ĐÃ CHECK-IN'
-                                        : (canCheckIn ? 'CHƯA CHECK-IN' : (current?.formattedStatus ?? 'KHÔNG HỢP LỆ')),
+                                        : (isAlreadyUsedBefore
+                                            ? 'ĐÃ SỬ DỤNG'
+                                            : (canCheckIn ? 'CHƯA CHECK-IN' : (current?.formattedStatus ?? 'KHÔNG HỢP LỆ'))),
                                     primaryColor,
                                   ),
                                   if (isAlreadyCheckedIn && current.formattedCheckInTime.isNotEmpty) ...[
@@ -1021,7 +1096,7 @@ class _QrScannerPageState extends State<QrScannerPage> with SingleTickerProvider
                       style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                     ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primaryContainer,
+                      backgroundColor: isAlreadyUsedBefore ? const Color(0xFFDC2626) : AppColors.primaryContainer,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 11),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -1087,8 +1162,12 @@ class _QrScannerPageState extends State<QrScannerPage> with SingleTickerProvider
                         border: Border.all(
                           color: _isProcessing
                               ? AppColors.primaryContainer
-                              : (hasActiveCard ? Colors.white30 : Colors.white.withValues(alpha: 0.5)),
-                          width: 2,
+                              : (hasActiveCard
+                                  ? (_activeTicket != null && _activeTicket!.isUsed && !_justCheckedIn
+                                      ? const Color(0xFFEF4444)
+                                      : (_justCheckedIn ? const Color(0xFF22C55E) : Colors.white30))
+                                  : Colors.white.withValues(alpha: 0.5)),
+                          width: (hasActiveCard && _activeTicket != null && (_activeTicket!.isUsed || _justCheckedIn)) ? 3 : 2,
                         ),
                       ),
                     ),
@@ -1265,17 +1344,17 @@ class _QrScannerPageState extends State<QrScannerPage> with SingleTickerProvider
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
-                        color: (_lastScanResult!['success'] == true ? const Color(0xFF22C55E) : AppColors.error).withValues(alpha: 0.2),
+                        color: (_lastScanResult!['success'] == true ? const Color(0xFF22C55E) : const Color(0xFFEF4444)).withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                          color: _lastScanResult!['success'] == true ? const Color(0xFF22C55E) : AppColors.error,
+                          color: _lastScanResult!['success'] == true ? const Color(0xFF22C55E) : const Color(0xFFEF4444),
                         ),
                       ),
                       child: Row(
                         children: [
                           Icon(
                             _lastScanResult!['success'] == true ? Icons.check_circle : Icons.error_outline,
-                            color: _lastScanResult!['success'] == true ? const Color(0xFF22C55E) : AppColors.error,
+                            color: _lastScanResult!['success'] == true ? const Color(0xFF22C55E) : const Color(0xFFEF4444),
                             size: 14,
                           ),
                           const SizedBox(width: 8),

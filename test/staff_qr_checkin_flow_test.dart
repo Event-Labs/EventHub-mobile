@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:eventhub_mobile/core/api/staff_service.dart';
 import 'package:eventhub_mobile/core/models/ticket_model.dart';
@@ -18,6 +19,7 @@ void main() {
 
       expect(ticket.isUsed, isFalse);
       expect(ticket.isValid, isTrue);
+      expect(ticket.statusColor, equals(const Color(0xFF22C55E)));
       expect(ticket.checkInTime, isNull);
       expect(ticket.ticketCode, equals('TICK-1234'));
       expect(ticket.customerName, equals('Nguyễn Văn A'));
@@ -37,6 +39,7 @@ void main() {
 
       expect(ticket.isUsed, isTrue);
       expect(ticket.isValid, isFalse);
+      expect(ticket.statusColor, equals(const Color(0xFFEF4444)));
       expect(ticket.checkInTime, equals(checkInTimestamp));
       expect(ticket.formattedCheckInTime, contains('21/10/2026'));
       expect(ticket.formattedStatus, equals('Đã dùng'));
