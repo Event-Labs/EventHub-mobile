@@ -905,28 +905,60 @@ class _StaffDirectBookingPageState extends State<StaffDirectBookingPage> {
                     ),
                     const SizedBox(width: 10),
                     Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () {
-                          Navigator.pop(ctx);
-                          _buyerNameController.clear();
-                          _buyerPhoneController.clear();
-                          _buyerEmailController.clear();
-                          _internalNoteController.clear();
-                          setState(() {
-                            _resetTicketQuantities();
-                          });
-                          // Refresh session seats after direct booking
-                          final sessId = _selectedSession?['id']?.toString();
-                          if (sessId != null) {
-                            _loadSessionSeats(sessId);
-                          }
-                        },
-                        icon: const Icon(Icons.add, size: 16, color: Colors.white),
-                        label: const Text('Đơn Mới', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primaryContainer,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFC99A47), Color(0xFFE6C17A)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(10),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFFC99A47).withValues(alpha: 0.35),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(10),
+                            onTap: () {
+                              Navigator.pop(ctx);
+                              _buyerNameController.clear();
+                              _buyerPhoneController.clear();
+                              _buyerEmailController.clear();
+                              _internalNoteController.clear();
+                              setState(() {
+                                _resetTicketQuantities();
+                              });
+                              // Refresh session seats after direct booking
+                              final sessId = _selectedSession?['id']?.toString();
+                              if (sessId != null) {
+                                _loadSessionSeats(sessId);
+                              }
+                            },
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 12),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.add, size: 16, color: Color(0xFF0D1B2A)),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    'Đơn Mới',
+                                    style: TextStyle(
+                                      color: Color(0xFF0D1B2A),
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -1083,14 +1115,42 @@ class _StaffDirectBookingPageState extends State<StaffDirectBookingPage> {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: _loadEvents,
-              icon: const Icon(Icons.refresh, size: 18, color: Colors.white),
-              label: const Text('Tải lại danh sách', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primaryContainer,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            Container(
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFC99A47), Color(0xFFE6C17A)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFC99A47).withValues(alpha: 0.35),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: _loadEvents,
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.refresh, size: 18, color: Color(0xFF0D1B2A)),
+                        SizedBox(width: 8),
+                        Text(
+                          'Tải lại danh sách',
+                          style: TextStyle(color: Color(0xFF0D1B2A), fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ),
           ],
@@ -2893,23 +2953,53 @@ class _StaffPayosPaymentDialogState extends State<_StaffPayosPaymentDialog> {
                 const SizedBox(height: 10),
               ],
 
-              ElevatedButton.icon(
-                onPressed: _isChecking ? null : () => _checkStatus(silent: false),
-                icon: _isChecking
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                      )
-                    : const Icon(Icons.refresh, size: 18, color: Colors.white),
-                label: Text(
-                  _isChecking ? 'Đang kiểm tra...' : 'Kiểm tra trạng thái PayOS',
-                  style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+              Container(
+                width: double.infinity,
+                height: 48,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFC99A47), Color(0xFFE6C17A)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFC99A47).withValues(alpha: 0.35),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
                 ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryContainer,
-                  minimumSize: const Size(double.infinity, 46),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: _isChecking ? null : () => _checkStatus(silent: false),
+                    child: Center(
+                      child: _isChecking
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF0D1B2A)),
+                            )
+                          : const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.refresh, size: 18, color: Color(0xFF0D1B2A)),
+                                SizedBox(width: 8),
+                                Text(
+                                  'Kiểm tra trạng thái PayOS',
+                                  style: TextStyle(
+                                    color: Color(0xFF0D1B2A),
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                    ),
+                  ),
                 ),
               ),
             ],
