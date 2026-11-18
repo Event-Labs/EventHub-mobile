@@ -412,7 +412,7 @@ class _StaffDashboardPageState extends State<StaffDashboardPage> {
                       Icons.person_search,
                       'Tra Cứu Khách',
                       'CHECK-IN TAY',
-                      Colors.orange,
+                      AppColors.primaryContainer,
                     ),
                   ),
                 ),
@@ -440,7 +440,7 @@ class _StaffDashboardPageState extends State<StaffDashboardPage> {
                       Icons.point_of_sale,
                       'Bán Vé Trực Tiếp',
                       'QUẦY POS BOX OFFICE',
-                      Colors.tealAccent,
+                      AppColors.primaryContainer,
                     ),
                   ),
                 ),
@@ -911,10 +911,18 @@ class _StaffDashboardPageState extends State<StaffDashboardPage> {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(colors: [Color(0xFFEA580C), Color(0xFFF97316)]),
+          gradient: const LinearGradient(
+            colors: [Color(0xFFC99A47), Color(0xFFE6C17A)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
-            BoxShadow(color: const Color(0xFFEA580C).withValues(alpha: 0.4), blurRadius: 20, offset: const Offset(0, 8)),
+            BoxShadow(
+              color: const Color(0xFFC99A47).withValues(alpha: 0.35),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
           ],
         ),
         child: Row(
@@ -923,23 +931,38 @@ class _StaffDashboardPageState extends State<StaffDashboardPage> {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
+                color: const Color(0xFF0D1B2A).withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: const Icon(Icons.qr_code_scanner, color: Colors.white, size: 28),
+              child: const Icon(Icons.qr_code_scanner, color: Color(0xFF0D1B2A), size: 28),
             ),
             const SizedBox(width: 16),
             const Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('QUÉT SOÁT VÉ TỨC THÌ (CAMERA)', style: TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                  Text(
+                    'QUÉT SOÁT VÉ TỨC THÌ (CAMERA)',
+                    style: TextStyle(
+                      color: Color(0xB30D1B2A),
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
                   SizedBox(height: 2),
-                  Text('QUÉT MÃ QR CHECK-IN', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                  Text(
+                    'QUÉT MÃ QR CHECK-IN',
+                    style: TextStyle(
+                      color: Color(0xFF0D1B2A),
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ],
               ),
             ),
-            const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 18),
+            const Icon(Icons.arrow_forward_ios, color: Color(0xFF0D1B2A), size: 18),
           ],
         ),
       ),
@@ -960,19 +983,11 @@ class _StaffDashboardPageState extends State<StaffDashboardPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF122155),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, color: accentColor, size: 20),
-              ),
+              Icon(icon, color: accentColor, size: 24),
               const Icon(Icons.chevron_right, color: AppColors.secondary, size: 16),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           Text(
             label,
             softWrap: true,
