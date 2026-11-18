@@ -339,24 +339,30 @@ class _AttendeeRegistryPageState extends State<AttendeeRegistryPage> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) {
-        return Padding(
-          padding: EdgeInsets.only(
-            left: 20,
-            right: 20,
-            top: 20,
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + 28,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 48,
-                height: 5,
-                decoration: BoxDecoration(
-                  color: Colors.white24,
-                  borderRadius: BorderRadius.circular(3),
-                ),
+        return SafeArea(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(ctx).size.height * 0.85,
+            ),
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              padding: EdgeInsets.only(
+                left: 20,
+                right: 20,
+                top: 20,
+                bottom: MediaQuery.of(ctx).viewInsets.bottom + 28,
               ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 48,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: Colors.white24,
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                  ),
               const SizedBox(height: 20),
               Container(
                 padding: const EdgeInsets.all(16),
@@ -409,24 +415,51 @@ class _AttendeeRegistryPageState extends State<AttendeeRegistryPage> {
                 ),
               ),
               const SizedBox(height: 20),
-              SizedBox(
+              Container(
                 width: double.infinity,
-                height: 46,
-                child: ElevatedButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primaryContainer,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                height: 48,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFC99A47), Color(0xFFE6C17A)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                  child: const Text('XONG / TIẾP TỤC', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFC99A47).withValues(alpha: 0.35),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () => Navigator.pop(ctx),
+                    child: const Center(
+                      child: Text(
+                        'XONG / TIẾP TỤC',
+                        style: TextStyle(
+                          color: Color(0xFF0D1B2A),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ],
           ),
-        );
-      },
+        ),
+      ),
     );
-  }
+  },
+);
+}
 
   void _showTicketDetailModal(TicketModel ticket) {
     showModalBottomSheet(
@@ -681,68 +714,107 @@ class _AttendeeRegistryPageState extends State<AttendeeRegistryPage> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) {
-        return Padding(
-          padding: EdgeInsets.only(
-            left: 20,
-            right: 20,
-            top: 20,
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 48,
-                  height: 5,
-                  decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(3)),
-                ),
+        return SafeArea(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(ctx).size.height * 0.88,
+            ),
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              padding: EdgeInsets.only(
+                left: 20,
+                right: 20,
+                top: 20,
+                bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
               ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Bộ Lọc Chi Tiết', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
-                  TextButton(
-                    onPressed: () {
-                      _ticketCodeController.clear();
-                      _buyerNameController.clear();
-                      _buyerEmailController.clear();
-                      _buyerPhoneController.clear();
-                      Navigator.pop(ctx);
-                      _fetchTicketsForSelectedEvent();
-                    },
-                    child: const Text('Đặt lại', style: TextStyle(color: Colors.redAccent, fontSize: 13)),
+                  Center(
+                    child: Container(
+                      width: 48,
+                      height: 5,
+                      decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(3)),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Bộ Lọc Chi Tiết', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold)),
+                      TextButton(
+                        onPressed: () {
+                          _ticketCodeController.clear();
+                          _buyerNameController.clear();
+                          _buyerEmailController.clear();
+                          _buyerPhoneController.clear();
+                          Navigator.pop(ctx);
+                          _fetchTicketsForSelectedEvent();
+                        },
+                        child: const Text('Đặt lại', style: TextStyle(color: Colors.redAccent, fontSize: 13)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  _buildFilterInputField('Mã vé', _ticketCodeController, Icons.qr_code),
+                  const SizedBox(height: 10),
+                  _buildFilterInputField('Tên người mua / tham dự', _buyerNameController, Icons.person_outline),
+                  const SizedBox(height: 10),
+                  _buildFilterInputField('Email người mua', _buyerEmailController, Icons.email_outlined),
+                  const SizedBox(height: 10),
+                  _buildFilterInputField('Số điện thoại', _buyerPhoneController, Icons.phone_outlined),
+                  const SizedBox(height: 20),
+                  Container(
+                    width: double.infinity,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFC99A47), Color(0xFFE6C17A)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFC99A47).withValues(alpha: 0.35),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(12),
+                        onTap: () {
+                          Navigator.pop(ctx);
+                          _fetchTicketsForSelectedEvent();
+                        },
+                        child: const Center(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.search, color: Color(0xFF0D1B2A), size: 18),
+                              SizedBox(width: 8),
+                              Text(
+                                'ÁP DỤNG BỘ LỌC',
+                                style: TextStyle(
+                                  color: Color(0xFF0D1B2A),
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              _buildFilterInputField('Mã vé', _ticketCodeController, Icons.qr_code),
-              const SizedBox(height: 10),
-              _buildFilterInputField('Tên người mua / tham dự', _buyerNameController, Icons.person_outline),
-              const SizedBox(height: 10),
-              _buildFilterInputField('Email người mua', _buyerEmailController, Icons.email_outlined),
-              const SizedBox(height: 10),
-              _buildFilterInputField('Số điện thoại', _buyerPhoneController, Icons.phone_outlined),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                height: 46,
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.pop(ctx);
-                    _fetchTicketsForSelectedEvent();
-                  },
-                  icon: const Icon(Icons.search, color: Colors.white, size: 18),
-                  label: const Text('ÁP DỤNG BỘ LỌC', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primaryContainer,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
         );
       },
@@ -1011,11 +1083,11 @@ class _AttendeeRegistryPageState extends State<AttendeeRegistryPage> {
             spacing: 6,
             runSpacing: 6,
             children: [
-              _buildBadge(role, const Color(0xFF0284C7)),
+              _buildBadge(role, const Color(0xFF10B981), icon: Icons.how_to_reg_outlined),
               if (gate != null && gate.isNotEmpty)
-                _buildBadge('Cổng: $gate', const Color(0xFF7C3AED)),
+                _buildBadge('Cổng: $gate', const Color(0xFFF59E0B), icon: Icons.meeting_room_outlined),
               if (zone != null && zone.isNotEmpty)
-                _buildBadge('Khu vực: $zone', const Color(0xFF4F46E5)),
+                _buildBadge('Khu vực: $zone', const Color(0xFF14B8A6), icon: Icons.layers_outlined),
             ],
           ),
         ],
@@ -1023,17 +1095,31 @@ class _AttendeeRegistryPageState extends State<AttendeeRegistryPage> {
     );
   }
 
-  Widget _buildBadge(String label, Color color) {
+  Widget _buildBadge(String label, Color color, {IconData? icon}) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.2),
+        color: color.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withValues(alpha: 0.5)),
+        border: Border.all(color: color.withValues(alpha: 0.6), width: 1),
       ),
-      child: Text(
-        label,
-        style: TextStyle(color: color.withValues(alpha: 0.95), fontSize: 10, fontWeight: FontWeight.bold),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, color: color, size: 12),
+            const SizedBox(width: 4),
+          ],
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.3,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1083,19 +1169,49 @@ class _AttendeeRegistryPageState extends State<AttendeeRegistryPage> {
             ),
           ),
           const SizedBox(width: 8),
-          InkWell(
-            onTap: _showAdvancedFilterSheet,
-            borderRadius: BorderRadius.circular(12),
-            child: Container(
-              height: 44,
-              width: 44,
-              decoration: BoxDecoration(
-                color: const Color(0xFF0C1446),
+          Builder(
+            builder: (context) {
+              final hasAdvancedFilters = _ticketCodeController.text.isNotEmpty ||
+                  _buyerNameController.text.isNotEmpty ||
+                  _buyerEmailController.text.isNotEmpty ||
+                  _buyerPhoneController.text.isNotEmpty;
+              return InkWell(
+                onTap: _showAdvancedFilterSheet,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white12),
-              ),
-              child: const Icon(Icons.tune, color: AppColors.secondary, size: 20),
-            ),
+                child: Container(
+                  height: 44,
+                  width: 44,
+                  decoration: BoxDecoration(
+                    gradient: hasAdvancedFilters
+                        ? const LinearGradient(
+                            colors: [Color(0xFFC99A47), Color(0xFFE6C17A)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          )
+                        : null,
+                    color: hasAdvancedFilters ? null : const Color(0xFF0C1446),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: hasAdvancedFilters ? Colors.transparent : AppColors.primaryContainer.withValues(alpha: 0.3),
+                    ),
+                    boxShadow: hasAdvancedFilters
+                        ? [
+                            BoxShadow(
+                              color: const Color(0xFFC99A47).withValues(alpha: 0.35),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: Icon(
+                    Icons.tune,
+                    color: hasAdvancedFilters ? const Color(0xFF0D1B2A) : AppColors.primaryContainer,
+                    size: 20,
+                  ),
+                ),
+              );
+            },
           ),
         ],
       ),
@@ -1150,17 +1266,33 @@ class _AttendeeRegistryPageState extends State<AttendeeRegistryPage> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
-            color: isSelected ? AppColors.primaryContainer : const Color(0xFF0C1446),
+            gradient: isSelected
+                ? const LinearGradient(
+                    colors: [Color(0xFFC99A47), Color(0xFFE6C17A)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  )
+                : null,
+            color: isSelected ? null : const Color(0xFF0C1446),
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
-              color: isSelected ? AppColors.primaryContainer : Colors.white10,
+              color: isSelected ? Colors.transparent : Colors.white10,
             ),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: const Color(0xFFC99A47).withValues(alpha: 0.35),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : null,
           ),
           child: Text(
             label,
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: isSelected ? Colors.white : Colors.white70,
+              color: isSelected ? const Color(0xFF0D1B2A) : Colors.white70,
               fontSize: 11,
               fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
             ),
@@ -1183,10 +1315,40 @@ class _AttendeeRegistryPageState extends State<AttendeeRegistryPage> {
             label: const Text('Đăng nhập lại', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
           ),
-        ElevatedButton(
-          onPressed: onRetry,
-          style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryContainer),
-          child: const Text('Thử lại', style: TextStyle(color: Colors.white)),
+        Container(
+          height: 38,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFFC99A47), Color(0xFFE6C17A)],
+            ),
+            borderRadius: BorderRadius.circular(10),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFFC99A47).withValues(alpha: 0.3),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(10),
+              onTap: onRetry,
+              child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20),
+                child: Center(
+                  child: Text(
+                    'Thử lại',
+                    style: TextStyle(
+                      color: Color(0xFF0D1B2A),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
         ),
       ],
     );
@@ -1349,24 +1511,50 @@ class _AttendeeRegistryPageState extends State<AttendeeRegistryPage> {
                       ),
                     ),
                   ] else ...[
-                    ElevatedButton(
-                      onPressed: isCheckingIn ? null : () => _handleManualCheckIn(item),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primaryContainer,
-                        minimumSize: const Size(82, 34),
-                        padding: const EdgeInsets.symmetric(horizontal: 10),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    Container(
+                      height: 34,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFC99A47), Color(0xFFE6C17A)],
+                        ),
+                        borderRadius: BorderRadius.circular(8),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFC99A47).withValues(alpha: 0.3),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
-                      child: isCheckingIn
-                          ? const SizedBox(
-                              width: 14,
-                              height: 14,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                            )
-                          : const Text(
-                              'Check-in',
-                              style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(8),
+                          onTap: isCheckingIn ? null : () => _handleManualCheckIn(item),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 14),
+                            child: Center(
+                              child: isCheckingIn
+                                  ? const SizedBox(
+                                      width: 14,
+                                      height: 14,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Color(0xFF0D1B2A),
+                                      ),
+                                    )
+                                  : const Text(
+                                      'Check-in',
+                                      style: TextStyle(
+                                        color: Color(0xFF0D1B2A),
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
                             ),
+                          ),
+                        ),
+                      ),
                     ),
                   ],
                 ],

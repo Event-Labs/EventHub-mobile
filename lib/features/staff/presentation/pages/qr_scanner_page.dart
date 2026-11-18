@@ -528,19 +528,40 @@ class _QrScannerPageState extends State<QrScannerPage> with SingleTickerProvider
             onPressed: () => Navigator.pop(ctx),
             child: const Text('Hủy', style: TextStyle(color: AppColors.secondary)),
           ),
-          ElevatedButton(
-            onPressed: () {
-              final code = _manualCodeController.text.trim();
-              Navigator.pop(ctx);
-              if (code.isNotEmpty) {
-                _processTicketCode(code);
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primaryContainer,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          Container(
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFFC99A47), Color(0xFFE6C17A)],
+              ),
+              borderRadius: BorderRadius.circular(10),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFC99A47).withValues(alpha: 0.35),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
-            child: const Text('Xác Thực Check-in', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(10),
+                onTap: () {
+                  final code = _manualCodeController.text.trim();
+                  Navigator.pop(ctx);
+                  if (code.isNotEmpty) {
+                    _processTicketCode(code);
+                  }
+                },
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  child: Text(
+                    'Xác Thực Check-in',
+                    style: TextStyle(color: Color(0xFF0D1B2A), fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -1011,20 +1032,46 @@ class _QrScannerPageState extends State<QrScannerPage> with SingleTickerProvider
                   ],
                 ),
               ] else ...[
-                SizedBox(
+                Container(
                   width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: _dismissActiveTicketCard,
-                    icon: const Icon(Icons.qr_code_scanner, color: Colors.white, size: 18),
-                    label: const Text(
-                      'QUÉT VÉ TIẾP THEO',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFC99A47), Color(0xFFE6C17A)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primaryContainer,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 11),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFFC99A47).withValues(alpha: 0.35),
+                        blurRadius: 10,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(10),
+                      onTap: _dismissActiveTicketCard,
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 11),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.qr_code_scanner, color: Color(0xFF0D1B2A), size: 18),
+                            SizedBox(width: 8),
+                            Text(
+                              'QUÉT VÉ TIẾP THEO',
+                              style: TextStyle(
+                                color: Color(0xFF0D1B2A),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 ),
